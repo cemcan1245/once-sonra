@@ -1,0 +1,22 @@
+# Android
+android-proje/.gradle/
+android-proje/local.properties
+android-proje/app/build/
+android-proje/build/
+android-proje/*.iml
+android-proje/.idea/
+android-proje/captures/
+android-proje/.externalNativeBuild/
+android-proje/.cxx/
+
+# iOS
+ios-proje/OnceSonra.xcodeproj/xcuserdata/
+ios-proje/OnceSonra.xcodeproj/project.xcworkspace/xcuserdata/
+ios-proje/DerivedData/
+ios-proje/*.ipa
+ios-proje/*.xcarchive
+
+# Genel
+*.DS_Store
+Thumbs.db
+*.log

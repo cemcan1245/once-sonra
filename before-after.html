@@ -80,10 +80,31 @@
       font-size: 0.82rem; padding: 5px 12px; border-radius: 20px;
       border: 1px solid #333; background: #16213e; color: #888;
       min-width: 200px; text-align: center; transition: all 0.3s;
+      cursor: default;
     }
+    .date-chip.loaded   { cursor: pointer; }
+    .date-chip.loaded:hover { border-color: #5577cc; filter: brightness(1.15); }
     .date-chip.exif     { color: #16c79a; border-color: #16c79a55; background: #0d2e26; }
     .date-chip.fallback { color: #f0a500; border-color: #f0a50055; background: #2e2400; }
     .date-chip.none     { color: #e94560; border-color: #e9456055; background: #2e0d15; }
+    .date-chip.edited   { color: #aac4ff; border-color: #5577cc55; background: #0f1e40; }
+
+    .date-edit-row {
+      display: none; align-items: center; gap: 6px; margin-top: 2px;
+    }
+    .date-edit-row input[type="date"] {
+      background: #16213e; border: 1px solid #5577cc; color: #eee;
+      border-radius: 6px; padding: 6px 10px; font-size: 15px;
+      min-height: 38px; outline: none; color-scheme: dark;
+    }
+    .date-edit-row input[type="date"]:focus { border-color: #aac4ff; }
+    .btn-date-ok, .btn-date-cancel {
+      padding: 6px 12px; font-size: 0.85rem; font-weight: 600;
+      border-radius: 6px; cursor: pointer; min-height: 34px;
+      touch-action: manipulation;
+    }
+    .btn-date-ok     { background: #16c79a; color: #fff; border: none; }
+    .btn-date-cancel { background: #16213e; color: #aaa; border: 1px solid #333; }
 
     #statusBanner {
       display: none; align-items: center; gap: 10px;
@@ -380,6 +401,11 @@
         <input type="file" accept="image/*,video/*" id="file1">
       </div>
       <div class="date-chip" id="chip1">Tarih bekleniyor…</div>
+      <div class="date-edit-row" id="dateEditRow0">
+        <input type="date" id="dateInput0">
+        <button type="button" class="btn-date-ok"     id="btnDateOk0">✓</button>
+        <button type="button" class="btn-date-cancel" id="btnDateCancel0">✕</button>
+      </div>
     </div>
     <div class="upload-box">
       <span class="photo-num">DOSYA 2</span>
@@ -388,6 +414,11 @@
         <input type="file" accept="image/*,video/*" id="file2">
       </div>
       <div class="date-chip" id="chip2">Tarih bekleniyor…</div>
+      <div class="date-edit-row" id="dateEditRow1">
+        <input type="date" id="dateInput1">
+        <button type="button" class="btn-date-ok"     id="btnDateOk1">✓</button>
+        <button type="button" class="btn-date-cancel" id="btnDateCancel1">✕</button>
+      </div>
     </div>
   </div>
 
@@ -759,6 +790,58 @@
       return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
     }
 
+    /* ── Tarih düzenleme ── */
+    function openDateEdit(idx) {
+      if (!data[idx]) return;
+      const row = document.getElementById('dateEditRow' + idx);
+      const inp = document.getElementById('dateInput' + idx);
+      if (data[idx].date) {
+        const d = data[idx].date;
+        inp.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else {
+        inp.value = '';
+      }
+      row.style.display = 'flex';
+      setTimeout(() => inp.focus(), 50);
+    }
+
+    function applyDateEdit(idx) {
+      const row = document.getElementById('dateEditRow' + idx);
+      const inp = document.getElementById('dateInput' + idx);
+      row.style.display = 'none';
+      if (!data[idx] || !inp.value) return;
+      const parts  = inp.value.split('-');
+      const newDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      data[idx].date    = newDate;
+      data[idx].dateStr = formatDate(newDate);
+      const chip = slots[idx].chip;
+      chip.textContent = `✏ ${data[idx].dateStr}`;
+      chip.className   = 'date-chip edited loaded';
+      checkReady();
+    }
+
+    function cancelDateEdit(idx) {
+      document.getElementById('dateEditRow' + idx).style.display = 'none';
+    }
+
+    document.getElementById('btnDateOk0').addEventListener('click',     () => applyDateEdit(0));
+    document.getElementById('btnDateOk1').addEventListener('click',     () => applyDateEdit(1));
+    document.getElementById('btnDateCancel0').addEventListener('click', () => cancelDateEdit(0));
+    document.getElementById('btnDateCancel1').addEventListener('click', () => cancelDateEdit(1));
+    document.getElementById('dateInput0').addEventListener('keydown', e => { if (e.key === 'Enter') applyDateEdit(0); if (e.key === 'Escape') cancelDateEdit(0); });
+    document.getElementById('dateInput1').addEventListener('keydown', e => { if (e.key === 'Enter') applyDateEdit(1); if (e.key === 'Escape') cancelDateEdit(1); });
+
+    /* ── İndirme dosya adı ── */
+    function buildFilename(ext) {
+      const proc = procSelect.value || 'once-sonra';
+      const now  = new Date();
+      const d    = String(now.getDate()).padStart(2,'0');
+      const m    = String(now.getMonth()+1).padStart(2,'0');
+      const y    = now.getFullYear();
+      const safe = proc.replace(/[\/\\:*?"<>|]/g, '_');
+      return `${safe}_${d}.${m}.${y}.${ext}`;
+    }
+
     async function getPhotoDate(file) {
       try {
         const tags = await exifr.parse(file, ['DateTimeOriginal','DateTime','CreateDate']);
@@ -783,9 +866,9 @@
       const dateStr = formatDate(date);
       const chip    = slot.chip;
 
-      if (source === 'exif')         { chip.textContent = `📅 Çekim tarihi: ${dateStr}`;                    chip.className = 'date-chip exif'; }
-      else if (source === 'fallback'){ chip.textContent = `${isVideo?'🎬':'📁'} Dosya tarihi: ${dateStr}`; chip.className = 'date-chip fallback'; }
-      else                           { chip.textContent = '⚠ Tarih bulunamadı';                             chip.className = 'date-chip none'; }
+      if (source === 'exif')         { chip.textContent = `📅 Çekim tarihi: ${dateStr} ✏`;                    chip.className = 'date-chip exif loaded'; }
+      else if (source === 'fallback'){ chip.textContent = `${isVideo?'🎬':'📁'} Dosya tarihi: ${dateStr} ✏`; chip.className = 'date-chip fallback loaded'; }
+      else                           { chip.textContent = '⚠ Tarih bulunamadı — düzenle ✏';                 chip.className = 'date-chip none loaded'; }
 
       const img = isVideo ? await captureVideoFrame(file, slot.zone) : await loadImg(file, slot.zone);
       data[idx] = { img, file, date, dateStr, source, isVideo };
@@ -889,6 +972,7 @@
         const file = e.dataTransfer.files[0];
         if (file && (file.type.startsWith('image/') || file.type.startsWith('video/'))) handleFile(file, idx);
       });
+      slot.chip.addEventListener('click', () => openDateEdit(idx));
     });
 
     // Slider değer göstergeleri
@@ -1264,23 +1348,25 @@
 
     btnDownload.addEventListener('click', () => {
       if (lastBlob) {
+        const filename = buildFilename('webm');
         if (_inAndroid || _inIOS) {
           const reader = new FileReader();
-          reader.onload = () => nativeSave(reader.result, 'once-sonra.webm');
+          reader.onload = () => nativeSave(reader.result, filename);
           reader.readAsDataURL(lastBlob);
         } else {
           const a = document.createElement('a');
-          a.download = 'once-sonra.webm';
+          a.download = filename;
           a.href = URL.createObjectURL(lastBlob);
           a.click();
           setTimeout(() => URL.revokeObjectURL(a.href), 5000);
         }
       } else {
+        const filename = buildFilename('png');
         if (_inAndroid || _inIOS) {
-          nativeSave(canvas.toDataURL('image/png'), 'once-sonra.png');
+          nativeSave(canvas.toDataURL('image/png'), filename);
         } else {
           const a = document.createElement('a');
-          a.download = 'once-sonra.png';
+          a.download = filename;
           a.href = canvas.toDataURL('image/png');
           a.click();
         }

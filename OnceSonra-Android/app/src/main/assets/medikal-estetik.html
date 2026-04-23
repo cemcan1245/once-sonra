@@ -260,8 +260,11 @@ textarea.fc{resize:none;min-height:75px}
       <button class="sbtn active" id="mbtn-urunler" onclick="setMaliyetView('urunler',this)">Ürünler</button>
       <button class="sbtn" id="mbtn-sarf" onclick="setMaliyetView('sarf',this)">Sarf Malzeme</button>
     </div>
-    <div id="maliyet-urunler" class="scroll" style="flex:1"></div>
-    <div id="maliyet-sarf" class="scroll" style="flex:1;display:none"></div>
+    <div id="maliyet-urunler" class="scroll" style="flex:1;min-height:0"></div>
+    <div id="maliyet-sarf" class="scroll" style="flex:1;min-height:0;display:none"></div>
+    <div style="padding:12px 16px 16px;border-top:1px solid var(--b);flex-shrink:0">
+      <button class="btn" style="width:100%;color:#c0392b;border:1.5px solid #c0392b;background:transparent;padding:10px" onclick="openModal('ov-pin-reset')">🔓 Şifreyi Sıfırla</button>
+    </div>
   </div>
 </div>
 
@@ -338,7 +341,7 @@ textarea.fc{resize:none;min-height:75px}
     </div>
     <div class="fr2">
       <div class="fg"><label class="fl">TC Kimlik</label><input type="tel" class="fc" id="np-tc" placeholder="11 hane" maxlength="11"></div>
-      <div class="fg"><label class="fl">Doğum Tarihi</label><input type="date" class="fc" id="np-dob"></div>
+      <div class="fg"><label class="fl">Yaş</label><input type="number" class="fc" id="np-age" placeholder="Yaş" min="1" max="120" inputmode="numeric"></div>
     </div>
     <div class="fg"><label class="fl">Telefon</label><input type="tel" class="fc" id="np-phone" placeholder="05XX XXX XX XX"></div>
     <div class="fg"><label class="fl">Şikayet</label><textarea class="fc" id="np-complaint" placeholder="Başvuru şikayeti..." rows="3"></textarea></div>
@@ -465,6 +468,20 @@ textarea.fc{resize:none;min-height:75px}
     </div>
   </div>
   <div class="mfooter"><button class="btn btn-p btn-full" onclick="saveNewProduct()">Ekle</button></div>
+</div>
+</div>
+
+<!-- PIN Reset Modal -->
+<div class="overlay" id="ov-pin-reset">
+<div class="modal" style="max-height:50vh">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle">Şifreyi Sıfırla</div><button class="mclose" onclick="closeModal('ov-pin-reset')">×</button></div>
+  <div class="mbody">
+    <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Sıfırlama için master şifreyi girin.</div>
+    <div class="fg"><label class="fl">Master Şifre</label><input type="password" class="fc" id="pin-reset-master" placeholder="Master şifre" autocomplete="off"></div>
+    <div id="pin-reset-err" style="color:var(--err);font-size:13px;min-height:18px"></div>
+  </div>
+  <div class="mfooter"><button class="btn btn-p btn-full" onclick="doResetPin()">Sıfırla</button></div>
 </div>
 </div>
 
@@ -934,7 +951,7 @@ function openPatientFile(pid,mode){
   const fields=[
     ['Cinsiyet',p.gender==='K'?'Kadın':'Erkek'],
     ['TC Kimlik',p.tc||'—'],
-    ['Doğum Tarihi',p.dob?formatDate(p.dob):'—'],
+    ['Yaş',p.age?p.age+' yaş':'—'],
     ['Telefon',p.phone||'—'],
     ['Şikayet',p.complaint||'—'],
     ['Kronik Hastalık',p.chronic&&p.chronic.has==='Var'?`Var: ${p.chronic.detail}`:'Yok'],
@@ -1014,7 +1031,7 @@ function openNewPatientModal(){
   document.getElementById('np-modal-title').textContent='Yeni Hasta';
   document.getElementById('np-name').value='';
   document.getElementById('np-tc').value='';
-  document.getElementById('np-dob').value='';
+  document.getElementById('np-age').value='';
   document.getElementById('np-phone').value='';
   document.getElementById('np-complaint').value='';
   // Reset all toggle buttons and detail fields
@@ -1037,7 +1054,7 @@ function openEditPatientModal(p){
   document.getElementById('np-modal-title').textContent='Hasta Düzenle';
   document.getElementById('np-name').value=p.name||'';
   document.getElementById('np-tc').value=p.tc||'';
-  document.getElementById('np-dob').value=p.dob||'';
+  document.getElementById('np-age').value=p.age||'';
   document.getElementById('np-phone').value=p.phone||'';
   document.getElementById('np-complaint').value=p.complaint||'';
   // Gender
@@ -1136,7 +1153,7 @@ function savePatient(){
     name,
     gender:npGender,
     tc:document.getElementById('np-tc').value.trim(),
-    dob:document.getElementById('np-dob').value,
+    age:document.getElementById('np-age').value,
     phone:document.getElementById('np-phone').value.trim(),
     complaint:document.getElementById('np-complaint').value.trim(),
     chronic:getToggleFieldValue('np-chronic-detail'),
@@ -1468,6 +1485,18 @@ function savePinChange(){
   errEl.textContent='';
   closeModal('ov-pin-change');
   showToast('Şifre güncellendi');
+}
+
+function doResetPin(){
+  const master=document.getElementById('pin-reset-master').value;
+  const errEl=document.getElementById('pin-reset-err');
+  if(master!=='Cerrahpasa@3288'){errEl.textContent='Master şifre yanlış';return;}
+  db.settings.pin='1234';
+  saveDB('settings');
+  document.getElementById('pin-reset-master').value='';
+  errEl.textContent='';
+  closeModal('ov-pin-reset');
+  showToast('Şifre 1234 olarak sıfırlandı');
 }
 
 function lockMaliyet(){

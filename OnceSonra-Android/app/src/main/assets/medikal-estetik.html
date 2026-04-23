@@ -122,6 +122,7 @@ textarea.fc{resize:none;min-height:75px}
 .utg{display:flex;border:1.5px solid var(--b);border-radius:7px;overflow:hidden;flex-shrink:0}
 .utg-btn{padding:5px 9px;border:none;background:#fff;font-size:11px;cursor:pointer;color:var(--tl);font-weight:500;-webkit-user-select:none;transition:.15s}
 .utg-btn.sel{background:var(--p);color:#fff}
+.pr-price-inline{font-size:13px;font-weight:700;color:var(--p);min-width:52px;text-align:right;flex-shrink:0}
 .pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;flex:1}
 .pin-dots{display:flex;gap:14px;margin-bottom:28px}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--p);background:transparent;transition:.15s}
@@ -228,9 +229,11 @@ textarea.fc{resize:none;min-height:75px}
   <div class="seg">
     <button class="sbtn active" id="isbtn-genel" onclick="setIslemView('genel',this)">Genel</button>
     <button class="sbtn" id="isbtn-recent" onclick="setIslemView('recent',this)">Son Yapılanlar</button>
+    <button class="sbtn" id="isbtn-yonet" onclick="setIslemView('yonet',this)">⚙ Yönet</button>
   </div>
   <div id="islem-genel" class="scroll"></div>
   <div id="islem-recent" class="scroll" style="display:none"></div>
+  <div id="islem-yonet" class="scroll" style="display:none"></div>
 </div>
 
 <!-- ====== TAB 4: AYARLAR ====== -->
@@ -579,7 +582,7 @@ const PROD_CATS = [
 // ==================== DATABASE ====================
 let db = {
   patients:[],appointments:[],procedures:[],
-  products:[],consumables:[],
+  products:[],consumables:[],cats:[],
   settings:{pin:'1234',euroRate:40,laborMult:1,sarfCost:0},
   fiyatTemplates:{}
 };
@@ -597,11 +600,14 @@ function loadDB(){
     db.settings=ss?JSON.parse(ss):{pin:'1234',euroRate:40,laborMult:1,sarfCost:0};
     const sf=localStorage.getItem('ek_fiyat');
     db.fiyatTemplates=sf?JSON.parse(sf):{};
+    const scat=localStorage.getItem('ek_cats');
+    db.cats=scat?JSON.parse(scat):CATS.map(c=>({...c}));
+    db.cats.forEach(c=>{if(c.direct===undefined)c.direct=c.subs.length===0;});
   }catch(e){}
 }
 
 function saveDB(...keys){
-  if(!keys.length) keys=['patients','appointments','procedures','products','consumables','settings','fiyatTemplates'];
+  if(!keys.length) keys=['patients','appointments','procedures','products','consumables','settings','fiyatTemplates','cats'];
   keys.forEach(k=>{
     try{
       const val=k==='fiyatTemplates'?db.fiyatTemplates:db[k];
@@ -1186,23 +1192,24 @@ function savePatient(){
 function setIslemView(v,btn){
   document.getElementById('islem-genel').style.display=v==='genel'?'block':'none';
   document.getElementById('islem-recent').style.display=v==='recent'?'block':'none';
-  document.querySelectorAll('.seg .sbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('islem-yonet').style.display=v==='yonet'?'block':'none';
+  document.querySelectorAll('#page-islemler .sbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   if(v==='recent') renderRecentProcs();
+  if(v==='yonet') renderIslemYonet();
 }
 
 function renderIslemler(){
   renderGenelIslemler();
-  if(document.getElementById('islem-recent').style.display!=='none') renderRecentProcs();
 }
+
+function isCatDirect(cat){return cat.direct!==undefined?cat.direct:cat.subs.length===0;}
 
 function renderGenelIslemler(){
   const el=document.getElementById('islem-genel');
-  const directCats=['dolgu','sivi-yuz','ip-aski','iv'];
   let html='<div style="padding:10px 14px 4px;font-size:13px;color:var(--tl)">İşlem seçerek seans fiyatını hesaplayın ve kaydedin.</div>';
   html+='<div style="padding-bottom:20px">';
-  CATS.forEach(cat=>{
-    const isDirect=directCats.includes(cat.id);
+  db.cats.forEach(cat=>{
     html+=`<div class="acc-item">
       <div class="acc-head" onclick="toggleAcc(this)">
         <div class="acc-icon">${cat.icon}</div>
@@ -1210,16 +1217,12 @@ function renderGenelIslemler(){
         <div class="acc-arrow">▼</div>
       </div>
       <div class="acc-body">`;
-    if(isDirect){
+    if(isCatDirect(cat)){
       const prods=db.products.filter(p=>p.cat===cat.id);
       if(prods.length){
         prods.forEach(prod=>{
-          const key=cat.id+'::prod::'+prod.id;
-          const tmpl=db.fiyatTemplates[key];
-          const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
           html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${prod.id}','${cat.name}',true)">
             <div class="acc-sub-name">${prod.name}</div>
-            ${price?`<div style="font-size:13px;font-weight:700;color:var(--p);margin-right:4px">${price}</div>`:''}
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </div>`;
         });
@@ -1229,12 +1232,8 @@ function renderGenelIslemler(){
     } else {
       const items=cat.subs.length?cat.subs:[cat.name];
       items.forEach(sub=>{
-        const key=cat.id+(cat.subs.length?'::'+sub:'');
-        const tmpl=db.fiyatTemplates[key];
-        const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
         html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${sub}','${cat.name}')">
           <div class="acc-sub-name">${sub}</div>
-          ${price?`<div style="font-size:13px;font-weight:700;color:var(--p);margin-right:4px">${price}</div>`:''}
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>`;
       });
@@ -1372,12 +1371,7 @@ function openFiyatDetail(catId,sub,catName,isProdDirect){
   } else {
     key=catId+(sub!==catName?'::'+sub:'');
     title=catName===sub?catName:catName+' – '+sub;
-    catProducts=db.products.filter(p=>{
-      if(catId==='botoks') return p.cat==='botoks';
-      if(catId==='mezoterapi') return p.cat==='mezoterapi-yuz'||p.cat==='mezoterapi-sac';
-      if(catId==='lipoliz') return p.cat==='lipoliz';
-      return false;
-    });
+    catProducts=db.products.filter(p=>p.cat===catId||p.cat.startsWith(catId+'-'));
   }
   const tmpl=db.fiyatTemplates[key]||{};
   fiyatCurrentQtys=Object.assign({},tmpl.qtys||{});
@@ -1385,16 +1379,17 @@ function openFiyatDetail(catId,sub,catName,isProdDirect){
   document.getElementById('fd-title').textContent=title;
   let html='';
   if(catProducts.length){
-    html+='<div style="margin-bottom:10px;font-size:13px;color:var(--tl);padding:0 0 8px">Ürün miktarlarını girin:</div>';
     catProducts.forEach(prod=>{
-      const u=fiyatCurrentUnits[prod.id]||prod.unit;
+      const rawU=fiyatCurrentUnits[prod.id]||prod.unit||'adet';
+      const u=rawU==='cc'?'ml':rawU;
       html+=`<div class="pr-row">
         <div class="pr-pname">${prod.name}</div>
         <input type="number" class="pr-qty" id="fq-${prod.id}" value="${fiyatCurrentQtys[prod.id]||''}" placeholder="0" min="0" step="0.1" oninput="updateFiyatTotal()">
         <div class="utg">
           <button class="utg-btn${u==='adet'?' sel':''}" id="fu-${prod.id}-adet" onclick="setFiyatUnit('${prod.id}','adet')">adet</button>
-          <button class="utg-btn${u==='cc'?' sel':''}" id="fu-${prod.id}-cc" onclick="setFiyatUnit('${prod.id}','cc')">cc</button>
+          <button class="utg-btn${u==='ml'?' sel':''}" id="fu-${prod.id}-ml" onclick="setFiyatUnit('${prod.id}','ml')">ml</button>
         </div>
+        <div class="pr-price-inline" id="fp-${prod.id}"></div>
       </div>`;
     });
   }
@@ -1408,7 +1403,7 @@ function openFiyatDetail(catId,sub,catName,isProdDirect){
 
 function setFiyatUnit(prodId,unit){
   fiyatCurrentUnits[prodId]=unit;
-  ['adet','cc'].forEach(u=>{
+  ['adet','ml'].forEach(u=>{
     const btn=document.getElementById('fu-'+prodId+'-'+u);
     if(btn) btn.classList.toggle('sel',u===unit);
   });
@@ -1422,19 +1417,19 @@ function updateFiyatTotal(){
   products.forEach(p=>{
     const el=document.getElementById('fq-'+p.id);
     const qty=el?parseFloat(el.value)||0:0;
-    if(qty>0){
-      qtys[p.id]=qty;
-      total+=qty*(parseFloat(p.price)||0);
-    }
+    const cost=qty*(parseFloat(p.price)||0);
+    if(qty>0){qtys[p.id]=qty;total+=cost;}
+    const priceEl=document.getElementById('fp-'+p.id);
+    if(priceEl) priceEl.textContent=qty>0?'₺'+cost.toLocaleString('tr-TR',{maximumFractionDigits:0}):'';
   });
   fiyatCurrentQtys=qtys;
   const labor=db.settings.laborMult*(parseFloat(db.settings.euroRate)||0);
   const sarfCost=parseFloat(db.settings.sarfCost)||0;
   const sessionPrice=total+labor+sarfCost;
   document.getElementById('fd-total-box').innerHTML=`
-    <div class="pr-box" style="margin:16px 0 0">
-      <div class="pr-label">Seans Ücreti</div>
-      <div class="pr-amount">₺${sessionPrice.toLocaleString('tr-TR',{maximumFractionDigits:0})}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-top:2px solid var(--b);margin-top:6px">
+      <span style="font-size:14px;font-weight:600">Seans Ücreti</span>
+      <span style="font-size:18px;font-weight:800;color:var(--p)">₺${sessionPrice.toLocaleString('tr-TR',{maximumFractionDigits:0})}</span>
     </div>`;
 }
 
@@ -1455,6 +1450,163 @@ function saveFiyatTemplate(){
   closeModal('ov-fiyat-detail');
   renderGenelIslemler();
   showToast('Fiyat kaydedildi');
+}
+
+// ==================== İŞLEM YÖNETİMİ ====================
+let yonetNewType='direct';
+let yonetUnits={};
+
+function setYonetType(t){
+  yonetNewType=t;
+  const dBtn=document.getElementById('yonet-type-direct');
+  const sBtn=document.getElementById('yonet-type-subs');
+  if(dBtn) dBtn.className='tg-btn'+(t==='direct'?' yes':'');
+  if(sBtn) sBtn.className='tg-btn'+(t==='subs'?' yes':'');
+}
+
+function addNewCat(){
+  const icon=document.getElementById('yonet-new-icon').value.trim()||'💊';
+  const name=document.getElementById('yonet-new-name').value.trim();
+  if(!name){showToast('Kategori adı gerekli');return;}
+  const id='cat_'+Date.now();
+  db.cats.push({id,name,icon,subs:[],direct:yonetNewType==='direct'});
+  saveDB('cats');
+  document.getElementById('yonet-new-icon').value='';
+  document.getElementById('yonet-new-name').value='';
+  renderIslemYonet();
+  renderGenelIslemler();
+  showToast('Kategori eklendi');
+}
+
+function deleteCat(catId){
+  db.cats=db.cats.filter(c=>c.id!==catId);
+  saveDB('cats');
+  renderIslemYonet();
+  renderGenelIslemler();
+  showToast('Kategori silindi');
+}
+
+function addSubToCat(catId){
+  const input=document.getElementById('ys-'+catId);
+  if(!input) return;
+  const sub=input.value.trim();
+  if(!sub){showToast('Alt başlık adı gerekli');return;}
+  const cat=db.cats.find(c=>c.id===catId);
+  if(!cat) return;
+  if(!cat.subs.includes(sub)) cat.subs.push(sub);
+  saveDB('cats');
+  input.value='';
+  renderIslemYonet();
+  renderGenelIslemler();
+  showToast('Alt başlık eklendi');
+}
+
+function deleteSubFromCat(catId,sub){
+  const cat=db.cats.find(c=>c.id===catId);
+  if(!cat) return;
+  cat.subs=cat.subs.filter(s=>s!==sub);
+  saveDB('cats');
+  renderIslemYonet();
+  renderGenelIslemler();
+}
+
+function setYonetUnit(catId,unit){
+  yonetUnits[catId]=unit;
+  const aBtn=document.getElementById('yu-'+catId+'-adet');
+  const mBtn=document.getElementById('yu-'+catId+'-ml');
+  if(aBtn) aBtn.classList.toggle('sel',unit==='adet');
+  if(mBtn) mBtn.classList.toggle('sel',unit==='ml');
+}
+
+function addProdToCat(catId){
+  const nameEl=document.getElementById('yp-name-'+catId);
+  if(!nameEl) return;
+  const name=nameEl.value.trim();
+  if(!name){showToast('Ürün adı gerekli');return;}
+  const unit=yonetUnits[catId]||'adet';
+  const id='prod_'+Date.now();
+  db.products.push({id,name,cat:catId,unit,price:0});
+  saveDB('products');
+  nameEl.value='';
+  renderIslemYonet();
+  renderGenelIslemler();
+  showToast('Ürün eklendi');
+}
+
+function removeProdFromCat(prodId){
+  db.products=db.products.filter(p=>p.id!==prodId);
+  saveDB('products');
+  renderIslemYonet();
+  renderGenelIslemler();
+  showToast('Ürün silindi');
+}
+
+function renderIslemYonet(){
+  const el=document.getElementById('islem-yonet');
+  if(!el) return;
+  let html='<div style="padding:10px 14px;padding-bottom:30px">';
+  html+=`<div style="background:#fff;border-radius:12px;padding:14px;box-shadow:var(--sh);margin-bottom:12px">
+    <div style="font-size:14px;font-weight:700;color:var(--p);margin-bottom:10px">Yeni Kategori Ekle</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="text" class="fc" id="yonet-new-icon" placeholder="💊" style="width:52px;text-align:center;font-size:20px">
+      <input type="text" class="fc" id="yonet-new-name" placeholder="Kategori adı" style="flex:1">
+    </div>
+    <div class="tg-grp" style="margin-bottom:10px">
+      <button class="tg-btn yes" id="yonet-type-direct" onclick="setYonetType('direct')">Ürün Listeli</button>
+      <button class="tg-btn" id="yonet-type-subs" onclick="setYonetType('subs')">Alt Başlıklı</button>
+    </div>
+    <button class="btn btn-p" style="width:100%" onclick="addNewCat()">+ Kategori Ekle</button>
+  </div>`;
+  db.cats.forEach(cat=>{
+    const isDirect=isCatDirect(cat);
+    const prods=isDirect?db.products.filter(p=>p.cat===cat.id):[];
+    html+=`<div class="acc-item" style="margin-bottom:10px">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-icon">${cat.icon}</div>
+        <div style="flex:1">
+          <div class="acc-title">${cat.name}</div>
+          <div style="font-size:11px;color:var(--tl);font-weight:400;margin-top:1px">${isDirect?'ürün listeli':'alt başlıklı'}</div>
+        </div>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px" onclick="event.stopPropagation();deleteCat('${cat.id}')">🗑</button>
+        <div class="acc-arrow">▼</div>
+      </div>
+      <div class="acc-body">`;
+    if(isDirect){
+      prods.forEach(prod=>{
+        const dispUnit=prod.unit==='cc'?'ml':prod.unit;
+        html+=`<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b);gap:8px">
+          <div style="flex:1;font-size:14px">${prod.name} <span style="font-size:11px;color:var(--tl)">(${dispUnit})</span></div>
+          <button style="background:none;border:none;font-size:18px;cursor:pointer;color:#e74c3c;padding:2px 6px" onclick="removeProdFromCat('${prod.id}')">×</button>
+        </div>`;
+      });
+      if(!yonetUnits[cat.id]) yonetUnits[cat.id]='adet';
+      html+=`<div style="padding:12px 14px">
+        <div style="font-size:12px;color:var(--tl);font-weight:600;margin-bottom:6px">Ürün Ekle</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input type="text" class="fc" id="yp-name-${cat.id}" placeholder="Ürün adı" style="flex:1">
+          <div class="utg" style="align-self:center">
+            <button class="utg-btn${(yonetUnits[cat.id]||'adet')==='adet'?' sel':''}" id="yu-${cat.id}-adet" onclick="setYonetUnit('${cat.id}','adet')">adet</button>
+            <button class="utg-btn${(yonetUnits[cat.id]||'adet')==='ml'?' sel':''}" id="yu-${cat.id}-ml" onclick="setYonetUnit('${cat.id}','ml')">ml</button>
+          </div>
+        </div>
+        <button class="btn btn-p" style="width:100%;font-size:13px" onclick="addProdToCat('${cat.id}')">+ Ekle</button>
+      </div>`;
+    } else {
+      cat.subs.forEach(sub=>{
+        html+=`<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b);gap:8px">
+          <div style="flex:1;font-size:14px">${sub}</div>
+          <button style="background:none;border:none;font-size:18px;cursor:pointer;color:#e74c3c;padding:2px 6px" onclick="deleteSubFromCat('${cat.id}',decodeURIComponent('${encodeURIComponent(sub)}'))">×</button>
+        </div>`;
+      });
+      html+=`<div style="padding:12px 14px;display:flex;gap:8px">
+        <input type="text" class="fc" id="ys-${cat.id}" placeholder="Alt başlık adı" style="flex:1">
+        <button class="btn btn-p" style="padding:8px 14px;white-space:nowrap" onclick="addSubToCat('${cat.id}')">+ Ekle</button>
+      </div>`;
+    }
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 // ==================== MALİYET ====================

@@ -3,15 +3,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Estetik Klinik</title>
-<meta name="description" content="Medikal estetik işlemleri ve hasta kayıt yönetim sistemi">
-<meta name="theme-color" content="#1a7a8a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Estetik Klinik">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--p:#1a7a8a;--pl:#e6f4f7;--a:#c8a84b;--bg:#f0f3f7;--card:#fff;--t:#2c3e50;--tl:#8a9ab0;--b:#e0e6ed;--ok:#27ae60;--err:#e74c3c;--sh:0 2px 10px rgba(0,0,0,.07)}
@@ -1625,11 +1616,13 @@ function renderMaliyetSarf(){
   </div>`;
   db.consumables.forEach(c=>{
     if(c.isParent){
+      // Parent header row — no price input, just a section label
       html+=`<div style="display:flex;align-items:center;padding:10px 14px 4px;background:var(--bg)">
         <div style="font-size:12px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px;flex:1">${c.name}</div>
         <button class="ci-del" onclick="deleteCons('${c.id}')" style="font-size:13px">✕</button>
       </div>`;
     } else if(c.parent){
+      // Child item — indented
       html+=`<div class="ci" style="padding-left:28px;background:#fafbfc">
         <div class="ci-name" style="font-size:13px;color:var(--t)">${c.name}</div>
         <select class="ci-unit" onchange="updateConsUnit('${c.id}',this.value)">
@@ -1642,6 +1635,7 @@ function renderMaliyetSarf(){
         <button class="ci-del" onclick="deleteCons('${c.id}')">✕</button>
       </div>`;
     } else {
+      // Normal item
       html+=`<div class="ci">
         <div class="ci-name">${c.name}</div>
         <select class="ci-unit" onchange="updateConsUnit('${c.id}',this.value)">
@@ -1731,7 +1725,6 @@ function showToast(msg){
 // ==================== INIT ====================
 loadDB();
 renderCalendar();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 </script>
 </body>
 </html>

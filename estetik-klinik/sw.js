@@ -1,4 +1,4 @@
-const CACHE = 'estetik-klinik-v4';
+const CACHE = 'estetik-klinik-v5';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {

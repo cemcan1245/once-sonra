@@ -128,6 +128,9 @@ textarea.fc{resize:none;min-height:75px}
 .pr-qty{width:65px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:14px;text-align:right;background:#fff;outline:none}
 .pr-qty:focus{border-color:var(--p)}
 .pr-unit{font-size:12px;color:var(--tl);width:28px;text-align:center}
+.utg{display:flex;border:1.5px solid var(--b);border-radius:7px;overflow:hidden;flex-shrink:0}
+.utg-btn{padding:5px 9px;border:none;background:#fff;font-size:11px;cursor:pointer;color:var(--tl);font-weight:500;-webkit-user-select:none;transition:.15s}
+.utg-btn.sel{background:var(--p);color:#fff}
 .pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;flex:1}
 .pin-dots{display:flex;gap:14px;margin-bottom:28px}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--p);background:transparent;transition:.15s}
@@ -1204,9 +1207,11 @@ function renderIslemler(){
 
 function renderGenelIslemler(){
   const el=document.getElementById('islem-genel');
+  const directCats=['dolgu','sivi-yuz','ip-aski','iv'];
   let html='<div style="padding:10px 14px 4px;font-size:13px;color:var(--tl)">İşlem seçerek seans fiyatını hesaplayın ve kaydedin.</div>';
   html+='<div style="padding-bottom:20px">';
   CATS.forEach(cat=>{
+    const isDirect=directCats.includes(cat.id);
     html+=`<div class="acc-item">
       <div class="acc-head" onclick="toggleAcc(this)">
         <div class="acc-icon">${cat.icon}</div>
@@ -1214,17 +1219,35 @@ function renderGenelIslemler(){
         <div class="acc-arrow">▼</div>
       </div>
       <div class="acc-body">`;
-    const items=cat.subs.length?cat.subs:[cat.name];
-    items.forEach(sub=>{
-      const key=cat.id+(cat.subs.length?'::'+sub:'');
-      const tmpl=db.fiyatTemplates[key];
-      const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
-      html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${sub}','${cat.name}')">
-        <div class="acc-sub-name">${sub}</div>
-        ${price?`<div style="font-size:13px;font-weight:700;color:var(--p);margin-right:4px">${price}</div>`:''}
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-      </div>`;
-    });
+    if(isDirect){
+      const prods=db.products.filter(p=>p.cat===cat.id);
+      if(prods.length){
+        prods.forEach(prod=>{
+          const key=cat.id+'::prod::'+prod.id;
+          const tmpl=db.fiyatTemplates[key];
+          const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
+          html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${prod.id}','${cat.name}',true)">
+            <div class="acc-sub-name">${prod.name}</div>
+            ${price?`<div style="font-size:13px;font-weight:700;color:var(--p);margin-right:4px">${price}</div>`:''}
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>`;
+        });
+      } else {
+        html+='<div style="padding:12px 15px;font-size:13px;color:var(--tl)">Henüz ürün eklenmedi.</div>';
+      }
+    } else {
+      const items=cat.subs.length?cat.subs:[cat.name];
+      items.forEach(sub=>{
+        const key=cat.id+(cat.subs.length?'::'+sub:'');
+        const tmpl=db.fiyatTemplates[key];
+        const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
+        html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${sub}','${cat.name}')">
+          <div class="acc-sub-name">${sub}</div>
+          ${price?`<div style="font-size:13px;font-weight:700;color:var(--p);margin-right:4px">${price}</div>`:''}
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>`;
+      });
+    }
     html+='</div></div>';
   });
   html+='</div>';
@@ -1315,6 +1338,7 @@ function toggleAcc(head){
 let fiyatCurrentCat=null;
 let fiyatCurrentSub=null;
 let fiyatCurrentQtys={};
+let fiyatCurrentUnits={};
 
 function renderFiyatlama(){
   const el=document.getElementById('fiyatlama-content');
@@ -1345,48 +1369,58 @@ function renderFiyatlama(){
   el.innerHTML=html;
 }
 
-function openFiyatDetail(catId,sub,catName){
+function openFiyatDetail(catId,sub,catName,isProdDirect){
   fiyatCurrentCat=catId;
   fiyatCurrentSub=sub;
-  const key=catId+(sub!==catName?'::'+sub:'');
+  let key,catProducts,title;
+  if(isProdDirect){
+    key=catId+'::prod::'+sub;
+    const prod=db.products.find(p=>p.id===sub);
+    catProducts=prod?[prod]:[];
+    title=prod?prod.name:catName;
+  } else {
+    key=catId+(sub!==catName?'::'+sub:'');
+    title=catName===sub?catName:catName+' – '+sub;
+    catProducts=db.products.filter(p=>{
+      if(catId==='botoks') return p.cat==='botoks';
+      if(catId==='mezoterapi') return p.cat==='mezoterapi-yuz'||p.cat==='mezoterapi-sac';
+      if(catId==='lipoliz') return p.cat==='lipoliz';
+      return false;
+    });
+  }
   const tmpl=db.fiyatTemplates[key]||{};
   fiyatCurrentQtys=Object.assign({},tmpl.qtys||{});
-  const title=catName===sub?catName:catName+' – '+sub;
+  fiyatCurrentUnits=Object.assign({},tmpl.units||{});
   document.getElementById('fd-title').textContent=title;
-
-  // Get relevant products for this category
-  const catProducts=db.products.filter(p=>{
-    if(catId==='botoks') return p.cat==='botoks';
-    if(catId==='mezoterapi') return p.cat==='mezoterapi-yuz'||p.cat==='mezoterapi-sac';
-    if(catId==='dolgu') return p.cat==='dolgu';
-    if(catId==='sivi-yuz') return p.cat==='sivi-yuz';
-    if(catId==='lipoliz') return p.cat==='lipoliz';
-    if(catId==='iv') return p.cat==='iv';
-    return false;
-  });
-
-  const labor=db.settings.laborMult*db.settings.euroRate;
-  const sarfCost=parseFloat(db.settings.sarfCost)||0;
-
   let html='';
   if(catProducts.length){
     html+='<div style="margin-bottom:10px;font-size:13px;color:var(--tl);padding:0 0 8px">Ürün miktarlarını girin:</div>';
     catProducts.forEach(prod=>{
+      const u=fiyatCurrentUnits[prod.id]||prod.unit;
       html+=`<div class="pr-row">
         <div class="pr-pname">${prod.name}</div>
         <input type="number" class="pr-qty" id="fq-${prod.id}" value="${fiyatCurrentQtys[prod.id]||''}" placeholder="0" min="0" step="0.1" oninput="updateFiyatTotal()">
-        <div class="pr-unit">${prod.unit}</div>
+        <div class="utg">
+          <button class="utg-btn${u==='adet'?' sel':''}" id="fu-${prod.id}-adet" onclick="setFiyatUnit('${prod.id}','adet')">adet</button>
+          <button class="utg-btn${u==='cc'?' sel':''}" id="fu-${prod.id}-cc" onclick="setFiyatUnit('${prod.id}','cc')">cc</button>
+        </div>
       </div>`;
     });
   }
   html+='<div id="fd-total-box"></div>';
   document.getElementById('fd-body').innerHTML=html;
-
-  // Store product list for calculation
   document.getElementById('fd-body').dataset.products=JSON.stringify(catProducts.map(p=>({id:p.id,unit:p.unit,price:p.price})));
   document.getElementById('fd-body').dataset.key=key;
   updateFiyatTotal();
   openModal('ov-fiyat-detail');
+}
+
+function setFiyatUnit(prodId,unit){
+  fiyatCurrentUnits[prodId]=unit;
+  ['adet','cc'].forEach(u=>{
+    const btn=document.getElementById('fu-'+prodId+'-'+u);
+    if(btn) btn.classList.toggle('sel',u===unit);
+  });
 }
 
 function updateFiyatTotal(){
@@ -1425,7 +1459,7 @@ function saveFiyatTemplate(){
     if(prod) materialCost+=qty*(parseFloat(prod.price)||0);
   });
   const sessionPrice=materialCost+labor+sarfCost;
-  db.fiyatTemplates[key]={qtys:fiyatCurrentQtys,sessionPrice};
+  db.fiyatTemplates[key]={qtys:fiyatCurrentQtys,units:fiyatCurrentUnits,sessionPrice};
   saveDB('fiyatTemplates');
   closeModal('ov-fiyat-detail');
   renderGenelIslemler();

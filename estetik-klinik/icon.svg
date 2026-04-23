@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#1a7a8a"/>
+  <!-- Medical cross -->
+  <rect x="196" y="140" width="120" height="232" rx="20" fill="white" opacity="0.95"/>
+  <rect x="140" y="196" width="232" height="120" rx="20" fill="white" opacity="0.95"/>
+  <!-- Gold star accent -->
+  <circle cx="380" cy="132" r="48" fill="#c8a84b"/>
+  <text x="380" y="147" text-anchor="middle" font-size="40" fill="white">✦</text>
+</svg>

@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="tr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Estetik Klinik</title>
+<meta name="description" content="Medikal estetik işlemleri ve hasta kayıt yönetim sistemi">
+<meta name="theme-color" content="#1a7a8a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Estetik Klinik">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--p:#1a7a8a;--pl:#e6f4f7;--a:#c8a84b;--bg:#f0f3f7;--card:#fff;--t:#2c3e50;--tl:#8a9ab0;--b:#e0e6ed;--ok:#27ae60;--err:#e74c3c;--sh:0 2px 10px rgba(0,0,0,.07)}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t)}
+#app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden}
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);display:none;flex-direction:column}
+.page.active{display:flex}
+.ph{background:linear-gradient(135deg,#1a7a8a,#115e6b);color:#fff;flex-shrink:0}
+.ph-inner{padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between}
+.ph h1{font-size:18px;font-weight:700}
+.ph .sub{font-size:11px;opacity:.75;margin-top:1px}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tabs{display:flex;background:#fff;border-top:1px solid var(--b);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 2px 8px;cursor:pointer;border:none;background:none;color:var(--tl);font-size:9.5px;font-weight:500;gap:3px;transition:.15s;-webkit-user-select:none}
+.tab svg{width:22px;height:22px;stroke-width:1.8}
+.tab.active{color:var(--p)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:.15s;-webkit-user-select:none;white-space:nowrap}
+.btn-p{background:var(--p);color:#fff}.btn-p:active{opacity:.85}
+.btn-sec{background:var(--pl);color:var(--p)}
+.btn-err{background:#fdecea;color:var(--err)}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:7px}
+.btn-xs{padding:4px 10px;font-size:11px;border-radius:6px}
+.btn-full{width:100%}
+.btn-ghost{background:none;border:1.5px solid var(--b);color:var(--t)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:92vh;display:flex;flex-direction:column}
+.mdrag{width:36px;height:4px;background:#ddd;border-radius:2px;margin:10px auto 2px}
+.mhead{padding:10px 18px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mtitle{font-size:17px;font-weight:700}
+.mclose{background:none;border:none;font-size:26px;cursor:pointer;color:var(--tl);line-height:1;padding:2px 6px}
+.mbody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 18px 16px;flex:1}
+.mfooter{padding:12px 18px 18px;border-top:1px solid var(--b);flex-shrink:0;display:flex;gap:8px}
+.fg{margin-bottom:14px}
+.fl{font-size:12px;font-weight:600;color:var(--tl);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.3px}
+.fc{width:100%;padding:10px 13px;border:1.5px solid var(--b);border-radius:9px;font-size:15px;outline:none;transition:.2s;background:#fff;color:var(--t);-webkit-appearance:none}
+.fc:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(26,122,138,.1)}
+textarea.fc{resize:none;min-height:75px}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.tg-grp{display:flex;gap:7px;margin-top:5px}
+.tg-btn{flex:1;padding:9px 6px;border:1.5px solid var(--b);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;text-align:center;transition:.15s;font-weight:500;-webkit-user-select:none}
+.tg-btn.yes{border-color:var(--ok);background:#eafaf1;color:#1a7a4a}
+.tg-btn.no{border-color:var(--b);background:#f8f9fa;color:var(--tl)}
+.sbar{padding:10px 14px;background:#fff;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center;flex-shrink:0;position:sticky;top:0;z-index:10}
+.si{flex:1;padding:8px 13px;border:1.5px solid var(--b);border-radius:20px;font-size:14px;outline:none;background:#f8f9fa;-webkit-appearance:none}
+.si:focus{border-color:var(--p);background:#fff}
+.pi{display:flex;align-items:center;padding:13px 14px;border-bottom:1px solid var(--b);cursor:pointer;background:#fff;-webkit-user-select:none}
+.pi:active{background:var(--pl)}
+.av{width:42px;height:42px;border-radius:50%;background:var(--pl);color:var(--p);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0;margin-right:12px}
+.av.f{background:#fde8f0;color:#c0446e}
+.pname{font-size:15px;font-weight:600}
+.psub{font-size:12px;color:var(--tl);margin-top:2px}
+.cal-top{background:linear-gradient(135deg,#1a7a8a,#115e6b);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cal-nav-btn{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;-webkit-user-select:none}
+.cal-nav-btn:active{background:rgba(255,255,255,.35)}
+.cal-title{color:#fff;font-size:16px;font-weight:700;flex:1;text-align:center;margin:0 8px}
+.cvb{display:flex;background:rgba(255,255,255,.15);border-radius:8px;overflow:hidden}
+.cvbtn{padding:6px 12px;border:none;background:transparent;font-size:12px;cursor:pointer;color:rgba(255,255,255,.8);font-weight:500;-webkit-user-select:none}
+.cvbtn.active{background:rgba(255,255,255,.9);color:var(--p)}
+.cal-wd{display:grid;grid-template-columns:repeat(7,1fr);background:rgba(26,94,107,.85);flex-shrink:0}
+.cal-wdc{color:rgba(255,255,255,.85);text-align:center;padding:7px 2px;font-size:10.5px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--b)}
+.cal-day{background:#fff;min-height:60px;padding:4px;cursor:pointer;-webkit-user-select:none;transition:.1s}
+.cal-day:active{background:var(--pl)}
+.cal-dn{font-size:13px;font-weight:600;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.cal-day.today .cal-dn{background:var(--p);color:#fff}
+.cal-day.om .cal-dn{color:#ccc}
+.cal-evs{margin-top:2px;display:flex;flex-direction:column;gap:1.5px}
+.cal-ev{font-size:9px;padding:1px 4px;border-radius:3px;background:var(--p);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wv-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.wv-head{display:grid;grid-template-columns:44px repeat(7,1fr);background:linear-gradient(135deg,#1a7a8a,#115e6b);color:#fff;position:sticky;top:0;z-index:5;flex-shrink:0}
+.wv-hc{text-align:center;padding:8px 2px;font-size:10.5px}
+.wv-hc.tc{background:rgba(255,255,255,.15);font-weight:700}
+.wv-row{display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--b);min-height:54px}
+.wv-time{font-size:10px;color:var(--tl);padding:4px 4px 0 4px;text-align:right;align-self:flex-start}
+.wv-cell{border-left:1px solid var(--b);padding:2px;cursor:pointer;min-height:54px}
+.wv-cell:active{background:var(--pl)}
+.wv-ev{font-size:9px;padding:2px 4px;background:var(--p);color:#fff;border-radius:3px;margin:1px 0;cursor:pointer}
+.dv-head{background:linear-gradient(135deg,#1a7a8a,#115e6b);color:#fff;padding:10px 14px;font-size:14px;font-weight:700;text-align:center;flex-shrink:0}
+.dv-row{display:grid;grid-template-columns:46px 1fr;border-bottom:1px solid var(--b);min-height:62px;cursor:pointer}
+.dv-row:active{background:var(--pl)}
+.dv-t{font-size:11px;color:var(--tl);padding:8px 6px 0 8px;text-align:right;align-self:flex-start}
+.dv-slot{padding:4px 10px;border-left:2px solid var(--b)}
+.dv-ev{background:var(--p);color:#fff;border-radius:7px;padding:7px 10px;margin:3px 0}
+.dv-ev-name{font-size:13px;font-weight:600}
+.dv-ev-note{font-size:11px;opacity:.8;margin-top:2px}
+.seg{display:flex;background:var(--pl);border-radius:10px;padding:3px;gap:2px;margin:10px 14px;flex-shrink:0}
+.sbtn{flex:1;padding:9px 8px;border:none;background:transparent;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;color:var(--p);transition:.15s;-webkit-user-select:none}
+.sbtn.active{background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.1)}
+.acc-item{margin:8px 14px;border-radius:12px;overflow:hidden;box-shadow:var(--sh);background:#fff}
+.acc-head{display:flex;align-items:center;padding:14px 15px;cursor:pointer;-webkit-user-select:none;background:#fff}
+.acc-head:active{background:var(--pl)}
+.acc-icon{width:34px;height:34px;border-radius:9px;background:var(--pl);color:var(--p);display:flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0;font-size:18px}
+.acc-title{flex:1;font-size:15px;font-weight:700}
+.acc-arrow{transition:.2s;color:var(--tl);font-size:14px}
+.acc-arrow.open{transform:rotate(180deg)}
+.acc-body{display:none;border-top:1px solid var(--b)}
+.acc-body.open{display:block}
+.acc-sub{display:flex;align-items:center;padding:12px 15px 12px 28px;border-bottom:1px solid var(--b);cursor:pointer;-webkit-user-select:none;gap:10px}
+.acc-sub:last-child{border-bottom:none}
+.acc-sub:active{background:var(--pl)}
+.acc-sub-name{flex:1;font-size:14px}
+.rp-item{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--b);background:#fff;gap:8px}
+.rp-date{font-size:11px;color:var(--tl);width:66px;flex-shrink:0}
+.rp-proc{flex:1;font-size:13px;font-weight:600;line-height:1.3}
+.rp-name{font-size:12px;color:var(--p);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.pr-box{background:linear-gradient(135deg,var(--p),#115e6b);color:#fff;border-radius:14px;padding:18px;margin:12px 14px;text-align:center}
+.pr-amount{font-size:30px;font-weight:800}
+.pr-label{font-size:12px;opacity:.8;margin-top:4px}
+.pr-row{display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--b)}
+.pr-pname{flex:1;font-size:14px}
+.pr-qty{width:65px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:14px;text-align:right;background:#fff;outline:none}
+.pr-qty:focus{border-color:var(--p)}
+.pr-unit{font-size:12px;color:var(--tl);width:28px;text-align:center}
+.pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;flex:1}
+.pin-dots{display:flex;gap:14px;margin-bottom:28px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--p);background:transparent;transition:.15s}
+.pin-dot.filled{background:var(--p)}
+.pin-kp{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:260px;width:100%}
+.pin-k{padding:16px 10px;background:#fff;border:1.5px solid var(--b);border-radius:12px;font-size:22px;font-weight:600;cursor:pointer;text-align:center;box-shadow:var(--sh);-webkit-user-select:none;color:var(--t)}
+.pin-k:active{background:var(--pl);border-color:var(--p)}
+.euro-bar{padding:12px 14px;background:#fff;border-bottom:1px solid var(--b);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.ebox{display:flex;align-items:center;gap:7px;background:#e8f6e8;padding:8px 12px;border-radius:9px}
+.lbox{display:flex;align-items:center;gap:7px;background:#fff8e1;padding:8px 12px;border-radius:9px;flex:1}
+.elbl{font-size:11px;color:var(--tl);font-weight:600;white-space:nowrap}
+.eval{font-size:16px;font-weight:800;color:#1a7a4a}
+.ein{width:72px;border:1.5px solid #f0c040;border-radius:7px;padding:4px 8px;font-size:14px;text-align:right;background:#fff;outline:none;color:var(--t)}
+.lresult{font-size:14px;font-weight:700;color:#a07800}
+.ci{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b);gap:8px}
+.ci-name{flex:1;font-size:14px}
+.ci-unit{padding:5px 7px;border:1.5px solid var(--b);border-radius:7px;font-size:12px;background:#fff;min-width:54px;outline:none;-webkit-appearance:none}
+.ci-price{width:82px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:13px;text-align:right;background:#fff;outline:none}
+.ci-del{background:none;border:none;color:var(--err);font-size:18px;cursor:pointer;padding:4px;-webkit-user-select:none}
+.il{padding:10px 14px;border-bottom:1px solid var(--b);display:flex;align-items:flex-start}
+.il-lbl{font-size:12.5px;color:var(--tl);width:130px;flex-shrink:0;padding-top:1px}
+.il-val{font-size:14px;font-weight:500;flex:1;line-height:1.4}
+.popup{position:fixed;background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.22);overflow:hidden;z-index:400;min-width:190px}
+.popup-item{padding:14px 18px;border-bottom:1px solid var(--b);cursor:pointer;font-size:14px;display:flex;align-items:center;gap:10px;-webkit-user-select:none}
+.popup-item:last-child{border-bottom:none}
+.popup-item:active{background:var(--pl)}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:rgba(30,40,55,.9);color:#fff;padding:10px 22px;border-radius:22px;font-size:13px;z-index:600;opacity:0;transition:.3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1}
+.tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;background:var(--pl);color:var(--p);font-size:12px;font-weight:600;margin:2px}
+.tag.warn{background:#fff8e1;color:#a07800}
+.tag.ok{background:#eafaf1;color:#1a7a4a}
+.tag.err{background:#fdecea;color:var(--err)}
+.appt-chip{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--b);gap:10px;background:#fff;cursor:pointer;-webkit-user-select:none}
+.appt-chip:active{background:var(--pl)}
+.appt-time{font-size:14px;font-weight:700;color:var(--p);width:50px;text-align:center;flex-shrink:0}
+.appt-dot{width:8px;height:8px;border-radius:50%;background:var(--p);flex-shrink:0}
+.appt-info{flex:1}
+.appt-name{font-size:14px;font-weight:600}
+.appt-note{font-size:12px;color:var(--tl);margin-top:1px}
+.divider{height:8px;background:var(--bg);flex-shrink:0}
+.sec-lbl{padding:14px 14px 6px;font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.7px;flex-shrink:0}
+.empty{text-align:center;padding:48px 20px;color:var(--tl)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty p{font-size:14px}
+.fab-area{padding:12px 14px;background:#fff;border-top:1px solid var(--b);flex-shrink:0}
+.proc-chip{display:flex;align-items:center;padding:8px 12px;gap:8px;background:var(--pl);border-radius:8px;margin-bottom:6px}
+.proc-chip-name{flex:1;font-size:13px;font-weight:600;color:var(--p)}
+.chip-del{background:none;border:none;color:var(--err);font-size:16px;cursor:pointer}
+.hist-item{padding:12px 14px;border-bottom:1px solid var(--b);cursor:pointer;background:#fff}
+.hist-item:active{background:var(--pl)}
+.hist-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.hist-proc{font-size:14px;font-weight:600}
+.hist-price{font-size:14px;font-weight:700;color:var(--p)}
+.hist-date{font-size:12px;color:var(--tl)}
+.sarf-cost-box{background:linear-gradient(135deg,#1a7a8a,#115e6b);color:#fff;border-radius:12px;margin:14px;padding:14px;display:flex;align-items:center;justify-content:space-between}
+.sarf-cost-lbl{font-size:13px;opacity:.85}
+.sarf-cost-in{width:100px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 10px;font-size:16px;font-weight:700;color:#fff;text-align:right;outline:none}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="pages">
+
+<!-- ====== TAB 1: AJANDA ====== -->
+<div id="page-ajanda" class="page active">
+  <div class="cal-top">
+    <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
+    <div class="cal-title" id="cal-title"></div>
+    <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
+    <div class="cvb" style="margin-left:8px">
+      <button class="cvbtn active" onclick="setCalView('month',this)">Ay</button>
+      <button class="cvbtn" onclick="setCalView('week',this)">Hafta</button>
+      <button class="cvbtn" onclick="setCalView('day',this)">Gün</button>
+    </div>
+  </div>
+  <div class="cal-wd" id="cal-wd"></div>
+  <div class="scroll" id="cal-body" style="flex:1"></div>
+  <div class="fab-area">
+    <button class="btn btn-p btn-full" onclick="openApptModal()">+ Randevu Ekle</button>
+  </div>
+</div>
+
+<!-- ====== TAB 2: HASTALAR ====== -->
+<div id="page-hastalar" class="page">
+  <div class="ph">
+    <div class="ph-inner">
+      <div><h1>Hastalar</h1><div class="sub" id="patient-count"></div></div>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff" onclick="showSortMenu(event)">Sırala ▾</button>
+    </div>
+  </div>
+  <div class="sbar">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#8a9ab0" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="search" class="si" placeholder="Hasta ara..." id="patient-search" oninput="searchPatients(this.value)">
+  </div>
+  <div class="scroll" id="patient-list"></div>
+  <div class="fab-area">
+    <button class="btn btn-p btn-full" onclick="openNewPatientModal()">+ Yeni Hasta</button>
+  </div>
+</div>
+
+<!-- ====== TAB 3: İŞLEMLER ====== -->
+<div id="page-islemler" class="page">
+  <div class="ph"><div class="ph-inner"><h1>İşlemler</h1></div></div>
+  <div class="seg">
+    <button class="sbtn active" id="isbtn-genel" onclick="setIslemView('genel',this)">Genel</button>
+    <button class="sbtn" id="isbtn-recent" onclick="setIslemView('recent',this)">Son Yapılanlar</button>
+  </div>
+  <div id="islem-genel" class="scroll"></div>
+  <div id="islem-recent" class="scroll" style="display:none"></div>
+</div>
+
+<!-- ====== TAB 4: FİYATLAMA ====== -->
+<div id="page-fiyatlama" class="page">
+  <div class="ph"><div class="ph-inner"><h1>Fiyatlama</h1><div class="sub">Seans ücreti hesaplayıcı</div></div></div>
+  <div class="scroll" id="fiyatlama-content"></div>
+</div>
+
+<!-- ====== TAB 5: MALİYET ====== -->
+<div id="page-maliyet" class="page">
+  <div id="pin-screen" class="pin-screen">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--pl);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:28px">🔒</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px">Maliyet Paneli</div>
+    <div style="font-size:13px;color:var(--tl);margin-bottom:24px">4 haneli şifrenizi girin</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-kp" id="pin-kp"></div>
+    <div id="pin-err" style="color:var(--err);font-size:13px;margin-top:14px;height:20px"></div>
+  </div>
+  <div id="maliyet-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div class="ph">
+      <div class="ph-inner">
+        <h1>Maliyet</h1>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff" onclick="lockMaliyet()">🔒 Kilitle</button>
+      </div>
+    </div>
+    <div class="euro-bar" id="maliyet-euro-bar"></div>
+    <div class="seg">
+      <button class="sbtn active" id="mbtn-urunler" onclick="setMaliyetView('urunler',this)">Ürünler</button>
+      <button class="sbtn" id="mbtn-sarf" onclick="setMaliyetView('sarf',this)">Sarf Malzeme</button>
+    </div>
+    <div id="maliyet-urunler" class="scroll" style="flex:1"></div>
+    <div id="maliyet-sarf" class="scroll" style="flex:1;display:none"></div>
+  </div>
+</div>
+
+</div><!-- /pages -->
+
+<!-- BOTTOM TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="showPage('ajanda',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Ajanda
+  </button>
+  <button class="tab" onclick="showPage('hastalar',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Hastalar
+  </button>
+  <button class="tab" onclick="showPage('islemler',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>İşlemler
+  </button>
+  <button class="tab" onclick="showPage('fiyatlama',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Fiyatlama
+  </button>
+  <button class="tab" onclick="showPage('maliyet',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><circle cx="12" cy="10" r="3"/></svg>Maliyet
+  </button>
+</div>
+</div><!-- /app -->
+
+<!-- ====== OVERLAYS / MODALS ====== -->
+
+<!-- Appointment Modal -->
+<div class="overlay" id="ov-appt">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="appt-modal-title">Randevu Ekle</div><button class="mclose" onclick="closeModal('ov-appt')">×</button></div>
+  <div class="mbody">
+    <input type="hidden" id="appt-edit-id">
+    <div class="fg"><label class="fl">Hasta Adı</label>
+      <input type="text" class="fc" id="appt-patient" placeholder="Ad Soyad" list="patient-datalist">
+      <datalist id="patient-datalist"></datalist>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Tarih</label><input type="date" class="fc" id="appt-date"></div>
+      <div class="fg"><label class="fl">Saat</label><input type="time" class="fc" id="appt-time" value="09:00"></div>
+    </div>
+    <div class="fg"><label class="fl">Not</label><textarea class="fc" id="appt-note" placeholder="Randevu notu..." rows="3"></textarea></div>
+  </div>
+  <div class="mfooter">
+    <button class="btn btn-err btn-sm" id="appt-del-btn" style="display:none" onclick="deleteAppt()">Sil</button>
+    <button class="btn btn-p" style="flex:1" onclick="saveAppt()">Kaydet</button>
+  </div>
+</div>
+</div>
+
+<!-- Day appointments modal -->
+<div class="overlay" id="ov-day">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="day-modal-title">Randevular</div><button class="mclose" onclick="closeModal('ov-day')">×</button></div>
+  <div class="mbody" id="day-modal-body"></div>
+  <div class="mfooter">
+    <button class="btn btn-p btn-full" id="day-add-btn" onclick="addApptForDay()">+ Randevu Ekle</button>
+  </div>
+</div>
+</div>
+
+<!-- New Patient Modal -->
+<div class="overlay" id="ov-new-patient">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="np-modal-title">Yeni Hasta</div><button class="mclose" onclick="closeModal('ov-new-patient')">×</button></div>
+  <div class="mbody" id="np-form-body">
+    <input type="hidden" id="np-edit-id">
+    <div class="fg"><label class="fl">Ad Soyad *</label><input type="text" class="fc" id="np-name" placeholder="Ad Soyad"></div>
+    <div class="fg"><label class="fl">Cinsiyet</label>
+      <div class="tg-grp">
+        <button class="tg-btn" id="np-gen-k" onclick="setGender('K')">Kadın</button>
+        <button class="tg-btn" id="np-gen-e" onclick="setGender('E')">Erkek</button>
+      </div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">TC Kimlik</label><input type="tel" class="fc" id="np-tc" placeholder="11 hane" maxlength="11"></div>
+      <div class="fg"><label class="fl">Doğum Tarihi</label><input type="date" class="fc" id="np-dob"></div>
+    </div>
+    <div class="fg"><label class="fl">Telefon</label><input type="tel" class="fc" id="np-phone" placeholder="05XX XXX XX XX"></div>
+    <div class="fg"><label class="fl">Şikayet</label><textarea class="fc" id="np-complaint" placeholder="Başvuru şikayeti..." rows="3"></textarea></div>
+    <div class="fg"><label class="fl">Kronik Hastalık</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-chronic-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-chronic-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-chronic-detail" placeholder="Hangi hastalıklar..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg"><label class="fl">Kullanılan İlaçlar</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-meds-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-meds-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-meds-detail" placeholder="İlaç adları..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg"><label class="fl">Alerji</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-allergy-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-allergy-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-allergy-detail" placeholder="Alerji detayları..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg" id="np-pregnancy-group" style="display:none"><label class="fl">Gebelik</label>
+      <div class="tg-grp"><button class="tg-btn no" id="np-preg-no" onclick="setToggle('pregnancy','Yok')">Yok</button><button class="tg-btn" id="np-preg-yes" onclick="setToggle('pregnancy','Var')">Var</button></div>
+    </div>
+    <div class="fg" id="np-breastfeed-group" style="display:none"><label class="fl">Emzirme</label>
+      <div class="tg-grp"><button class="tg-btn no" id="np-bf-no" onclick="setToggle('breastfeed','Yok')">Yok</button><button class="tg-btn" id="np-bf-yes" onclick="setToggle('breastfeed','Var')">Var</button></div>
+    </div>
+    <div class="fg"><label class="fl">Kan Sulandırıcı</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-blood-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-blood-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-blood-detail" placeholder="İlaç adı..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg"><label class="fl">Bulaşıcı Hastalık</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-infect-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-infect-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-infect-detail" placeholder="Hastalık adı..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg"><label class="fl">Geçirilmiş Ameliyat</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-surgery-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-surgery-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-surgery-detail" placeholder="Ameliyat detayları..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div class="fg"><label class="fl">Daha Önce Yapılan Estetik İşlemler</label>
+      <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-aesthetic-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-aesthetic-detail','Var')">Var</button></div>
+      <textarea class="fc" id="np-aesthetic-detail" placeholder="İşlem detayları..." rows="2" style="display:none;margin-top:8px"></textarea>
+    </div>
+    <div style="height:10px"></div>
+  </div>
+  <div class="mfooter">
+    <button class="btn btn-p btn-full" onclick="savePatient()">Kaydet</button>
+  </div>
+</div>
+</div>
+
+<!-- Patient File Modal -->
+<div class="overlay" id="ov-patient-file">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead">
+    <div class="mtitle" id="pfile-title">Hasta Dosyası</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn btn-sec btn-xs" onclick="editCurrentPatient()">Düzenle</button>
+      <button class="mclose" onclick="closeModal('ov-patient-file')">×</button>
+    </div>
+  </div>
+  <div class="mbody" id="pfile-body"></div>
+  <div class="mfooter" id="pfile-footer"></div>
+</div>
+</div>
+
+<!-- Procedure Record Modal -->
+<div class="overlay" id="ov-proc-record">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="pr-modal-title">Yeni İşlem Kaydı</div><button class="mclose" onclick="closeModal('ov-proc-record')">×</button></div>
+  <div class="mbody">
+    <input type="hidden" id="pr-type-id">
+    <input type="hidden" id="pr-type-name">
+    <div class="fg"><label class="fl">Hasta</label>
+      <input type="text" class="fc" id="pr-patient-input" placeholder="Hasta adı..." list="pr-patient-list">
+      <datalist id="pr-patient-list"></datalist>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Tarih</label><input type="date" class="fc" id="pr-date"></div>
+      <div class="fg"><label class="fl">Seans Ücreti (₺)</label><input type="number" class="fc" id="pr-price" placeholder="0"></div>
+    </div>
+    <div class="fg"><label class="fl">Not</label><textarea class="fc" id="pr-notes" placeholder="İşlem notu..." rows="3"></textarea></div>
+  </div>
+  <div class="mfooter">
+    <button class="btn btn-p btn-full" onclick="saveProcRecord()">Kaydet</button>
+  </div>
+</div>
+</div>
+
+<!-- Price view modal (click patient name in recent) -->
+<div class="overlay" id="ov-price-view">
+<div class="modal" style="max-height:50vh">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="pv-title">İşlem Ücreti</div><button class="mclose" onclick="closeModal('ov-price-view')">×</button></div>
+  <div class="mbody" id="pv-body"></div>
+</div>
+</div>
+
+<!-- Fiyatlama detail modal -->
+<div class="overlay" id="ov-fiyat-detail">
+<div class="modal">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle" id="fd-title">Seans Fiyatı</div><button class="mclose" onclick="closeModal('ov-fiyat-detail')">×</button></div>
+  <div class="mbody" id="fd-body"></div>
+  <div class="mfooter">
+    <button class="btn btn-p btn-full" onclick="saveFiyatTemplate()">Kaydet</button>
+  </div>
+</div>
+</div>
+
+<!-- Add product to maliyet -->
+<div class="overlay" id="ov-add-product">
+<div class="modal" style="max-height:50vh">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle">Ürün Ekle</div><button class="mclose" onclick="closeModal('ov-add-product')">×</button></div>
+  <div class="mbody">
+    <input type="hidden" id="ap-category">
+    <div class="fg"><label class="fl">Ürün Adı</label><input type="text" class="fc" id="ap-name" placeholder="Ürün adı..."></div>
+    <div class="fr2">
+      <div class="fg"><label class="fl">Birim</label>
+        <select class="fc" id="ap-unit"><option value="adet">Adet</option><option value="cc">cc</option><option value="ml">ml</option><option value="kutu">Kutu</option></select>
+      </div>
+      <div class="fg"><label class="fl">Fiyat (₺)</label><input type="number" class="fc" id="ap-price" placeholder="0"></div>
+    </div>
+  </div>
+  <div class="mfooter"><button class="btn btn-p btn-full" onclick="saveNewProduct()">Ekle</button></div>
+</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== CONSTANTS ====================
+const CATS = [
+  {id:'botoks',name:'Botoks',icon:'💉',subs:['3 Bölge','Massater','Terleme','Migren','Nefertiti']},
+  {id:'mezoterapi',name:'Mezoterapi',icon:'✨',subs:['Yüz','Saç','Skar']},
+  {id:'dolgu',name:'Dolgu',icon:'💧',subs:[]},
+  {id:'sivi-yuz',name:'Sıvı Yüz Germe',icon:'🌊',subs:[]},
+  {id:'ip-aski',name:'İp Askı',icon:'🧵',subs:[]},
+  {id:'lipoliz',name:'Lipoliz',icon:'🔥',subs:['Gıdı','Göbek','Bacak','Kol','Diğer']},
+  {id:'iv',name:'İV Tedaviler',icon:'🩸',subs:[]}
+];
+
+const DEFAULT_PRODUCTS = [
+  {id:'dysport',name:'Dysport',cat:'botoks',unit:'adet',price:0},
+  {id:'nabota',name:'Nabota',cat:'botoks',unit:'adet',price:0},
+  {id:'pinkglow',name:'Pinkglow',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'plinest-one',name:'Plinest One',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'newest-one',name:'Newest One',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'elastica',name:'Elastica Hydroboost',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'morphiya-yuz',name:'Morphiya Yüz',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'morphiya-scalp',name:'Morphiya Scalp',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'sonreir',name:'Sonreir Hair',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'plinest-hair',name:'Plinest Hair',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'minoksidil',name:'Minoksidil',cat:'mezoterapi-sac',unit:'cc',price:0},
+  {id:'dutasteride',name:'Dutasteride',cat:'mezoterapi-sac',unit:'cc',price:0},
+  {id:'ms-eksozom',name:'MS Pharma Eksozom',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'sardenya',name:'Sardenya Deep',cat:'dolgu',unit:'cc',price:0},
+  {id:'yvoire',name:'Yvoire Volume',cat:'dolgu',unit:'cc',price:0},
+  {id:'caha',name:'CaHa',cat:'sivi-yuz',unit:'cc',price:0},
+  {id:'revoderm',name:'Revoderm PLLA',cat:'sivi-yuz',unit:'cc',price:0},
+  {id:'gouri',name:'Gouri PCL',cat:'sivi-yuz',unit:'cc',price:0},
+  {id:'clh-lipaz',name:'CLH Lipaz',cat:'lipoliz',unit:'cc',price:0},
+  {id:'kollajenaz',name:'Kollajenaz',cat:'lipoliz',unit:'cc',price:0},
+  {id:'fosf-deoks',name:'Fosfotidilkolin Deoksikolat',cat:'lipoliz',unit:'cc',price:0},
+  {id:'hyaluronidaz',name:'Hyaluronidaz',cat:'lipoliz',unit:'cc',price:0},
+  {id:'l-carnitine',name:'L-Carnitine',cat:'lipoliz',unit:'cc',price:0},
+  {id:'myers',name:'Myers Cocktail',cat:'iv',unit:'adet',price:0},
+  {id:'infinity',name:'İnfinity Cocktail',cat:'iv',unit:'adet',price:0},
+  {id:'glutatyon',name:'Glutatyon',cat:'iv',unit:'adet',price:0},
+  {id:'alfa-lipoik',name:'Alfa Lipoik Asit',cat:'iv',unit:'adet',price:0}
+];
+
+const DEFAULT_CONSUMABLES = [
+  {id:'igne',name:'İğne Uçları',unit:'adet',price:0},
+  {id:'enjektor',name:'Enjektörler',unit:'adet',price:0},
+  {id:'anestezik',name:'Anestezik Krem',unit:'adet',price:0},
+  {id:'izotonik',name:'500 İzotonik',unit:'adet',price:0},
+  {id:'jetokain',name:'Jetokain',unit:'adet',price:0},
+  {id:'kanul',name:'Kanül',unit:'adet',price:0}
+];
+
+// Product category mapping for maliyet display
+const PROD_CATS = [
+  {id:'botoks',name:'Botoks',icon:'💉'},
+  {id:'mezoterapi-yuz',name:'Mezoterapi - Yüz',icon:'✨'},
+  {id:'mezoterapi-sac',name:'Mezoterapi - Saç',icon:'💆'},
+  {id:'dolgu',name:'Dolgu',icon:'💧'},
+  {id:'sivi-yuz',name:'Sıvı Yüz Germe',icon:'🌊'},
+  {id:'lipoliz',name:'Lipoliz',icon:'🔥'},
+  {id:'iv',name:'İV Tedaviler',icon:'🩸'}
+];
+
+// ==================== DATABASE ====================
+let db = {
+  patients:[],appointments:[],procedures:[],
+  products:[],consumables:[],
+  settings:{pin:'1234',euroRate:40,laborMult:1,sarfCost:0},
+  fiyatTemplates:{}
+};
+
+function loadDB(){
+  try{
+    db.patients=JSON.parse(localStorage.getItem('ek_patients')||'[]');
+    db.appointments=JSON.parse(localStorage.getItem('ek_appointments')||'[]');
+    db.procedures=JSON.parse(localStorage.getItem('ek_procedures')||'[]');
+    const sp=localStorage.getItem('ek_products');
+    db.products=sp?JSON.parse(sp):DEFAULT_PRODUCTS.map(p=>({...p}));
+    const sc=localStorage.getItem('ek_consumables');
+    db.consumables=sc?JSON.parse(sc):DEFAULT_CONSUMABLES.map(c=>({...c}));
+    const ss=localStorage.getItem('ek_settings');
+    db.settings=ss?JSON.parse(ss):{pin:'1234',euroRate:40,laborMult:1,sarfCost:0};
+    const sf=localStorage.getItem('ek_fiyat');
+    db.fiyatTemplates=sf?JSON.parse(sf):{};
+  }catch(e){}
+}
+
+function saveDB(...keys){
+  if(!keys.length) keys=['patients','appointments','procedures','products','consumables','settings','fiyatTemplates'];
+  keys.forEach(k=>{
+    try{
+      const val=k==='fiyatTemplates'?db.fiyatTemplates:db[k];
+      localStorage.setItem(k==='fiyatTemplates'?'ek_fiyat':'ek_'+k,JSON.stringify(val));
+    }catch(e){}
+  });
+}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+// ==================== NAVIGATION ====================
+let currentPage='ajanda';
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  currentPage=id;
+  closeAllPopups();
+  if(id==='ajanda') renderCalendar();
+  else if(id==='hastalar') renderPatients();
+  else if(id==='islemler') renderIslemler();
+  else if(id==='fiyatlama') renderFiyatlama();
+  else if(id==='maliyet') renderMaliyet();
+}
+
+// ==================== CALENDAR ====================
+let calDate=new Date();
+let calView='month';
+let calSelectedDate=null;
+
+function calNav(dir){
+  if(calView==='month'){calDate.setMonth(calDate.getMonth()+dir);}
+  else if(calView==='week'){calDate.setDate(calDate.getDate()+(dir*7));}
+  else{calDate.setDate(calDate.getDate()+dir);}
+  renderCalendar();
+}
+
+function setCalView(v,btn){
+  calView=v;
+  document.querySelectorAll('.cvbtn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderCalendar();
+}
+
+function renderCalendar(){
+  if(calView==='month') renderMonthView();
+  else if(calView==='week') renderWeekView();
+  else renderDayView();
+}
+
+const TR_MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const TR_DAYS=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+const TR_DAYS_SHORT=['P','S','Ç','P','C','C','P'];
+const TR_MONTHS_SHORT=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+
+function renderMonthView(){
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  const today=new Date();
+  document.getElementById('cal-title').textContent=TR_MONTHS[m]+' '+y;
+  document.getElementById('cal-wd').innerHTML=TR_DAYS.map(d=>`<div class="cal-wdc">${d}</div>`).join('');
+  document.getElementById('cal-wd').style.display='grid';
+
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  let startDow=firstDay.getDay();
+  if(startDow===0) startDow=7;
+  startDow--;
+
+  let html='<div class="cal-grid">';
+  const prevLast=new Date(y,m,0).getDate();
+  for(let i=startDow-1;i>=0;i--) html+=`<div class="cal-day om"><div class="cal-dn">${prevLast-i}</div></div>`;
+
+  for(let d=1;d<=lastDay.getDate();d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
+    const appts=db.appointments.filter(a=>a.date===ds);
+    html+=`<div class="cal-day${isToday?' today':''}" onclick="openDayModal('${ds}')">`;
+    html+=`<div class="cal-dn">${d}</div>`;
+    if(appts.length){
+      html+='<div class="cal-evs">';
+      appts.slice(0,2).forEach(a=>{html+=`<div class="cal-ev">${a.time} ${(a.patientName||'').split(' ')[0]}</div>`;});
+      if(appts.length>2) html+=`<div class="cal-ev" style="background:var(--a)">+${appts.length-2}</div>`;
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  const total=startDow+lastDay.getDate();
+  const rem=total%7===0?0:7-(total%7);
+  for(let d=1;d<=rem;d++) html+=`<div class="cal-day om"><div class="cal-dn">${d}</div></div>`;
+  html+='</div>';
+  document.getElementById('cal-body').innerHTML=html;
+}
+
+function renderWeekView(){
+  const today=new Date();
+  // Find Monday of current week
+  const d=new Date(calDate);
+  const dow=d.getDay()===0?7:d.getDay();
+  d.setDate(d.getDate()-(dow-1));
+  const weekStart=new Date(d);
+
+  document.getElementById('cal-wd').innerHTML='';
+  document.getElementById('cal-wd').style.display='none';
+
+  const days=[];
+  for(let i=0;i<7;i++){
+    const dd=new Date(weekStart);
+    dd.setDate(weekStart.getDate()+i);
+    days.push(dd);
+  }
+
+  const startStr=`${TR_MONTHS_SHORT[weekStart.getMonth()]} ${weekStart.getDate()}`;
+  const endDate=days[6];
+  document.getElementById('cal-title').textContent=startStr+' – '+endDate.getDate()+' '+TR_MONTHS_SHORT[endDate.getMonth()]+' '+endDate.getFullYear();
+
+  let html='<div style="flex:1;overflow-y:auto">';
+  // Header
+  html+='<div class="wv-head"><div class="wv-hc"></div>';
+  days.forEach((dd,i)=>{
+    const isT=dateStr(dd)===dateStr(today);
+    html+=`<div class="wv-hc${isT?' tc':''}">${TR_DAYS[i]}<br>${dd.getDate()}</div>`;
+  });
+  html+='</div>';
+
+  // Time rows 7:00-21:00
+  for(let h=7;h<=21;h++){
+    html+=`<div class="wv-row"><div class="wv-time">${h}:00</div>`;
+    days.forEach(dd=>{
+      const ds=dateStr(dd);
+      const slotAppts=db.appointments.filter(a=>a.date===ds&&parseInt(a.time)===h);
+      html+=`<div class="wv-cell" onclick="openApptForSlot('${ds}','${String(h).padStart(2,'0')}:00')">`;
+      slotAppts.forEach(a=>{html+=`<div class="wv-ev" onclick="event.stopPropagation();editAppt('${a.id}')">${a.time} ${(a.patientName||'').split(' ')[0]}</div>`;});
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  document.getElementById('cal-body').innerHTML=html;
+}
+
+function renderDayView(){
+  const today=new Date();
+  document.getElementById('cal-wd').innerHTML='';
+  document.getElementById('cal-wd').style.display='none';
+  const ds=dateStr(calDate);
+  const isToday=ds===dateStr(today);
+  const dayName=TR_DAYS[(calDate.getDay()===0?7:calDate.getDay())-1];
+  document.getElementById('cal-title').textContent=`${dayName}, ${calDate.getDate()} ${TR_MONTHS[calDate.getMonth()]}`;
+
+  let html=`<div style="flex:1;overflow-y:auto">`;
+  for(let h=7;h<=21;h++){
+    const slotAppts=db.appointments.filter(a=>a.date===ds&&parseInt(a.time)===h);
+    html+=`<div class="dv-row" onclick="openApptForSlot('${ds}','${String(h).padStart(2,'0')}:00')">`;
+    html+=`<div class="dv-t">${h}:00</div>`;
+    html+='<div class="dv-slot">';
+    slotAppts.forEach(a=>{
+      html+=`<div class="dv-ev" onclick="event.stopPropagation();editAppt('${a.id}')">`;
+      html+=`<div class="dv-ev-name">${a.time} – ${a.patientName||'İsimsiz'}</div>`;
+      if(a.notes) html+=`<div class="dv-ev-note">${a.notes}</div>`;
+      html+='</div>';
+    });
+    html+='</div></div>';
+  }
+  html+='</div>';
+  document.getElementById('cal-body').innerHTML=html;
+}
+
+function openDayModal(ds){
+  calSelectedDate=ds;
+  const appts=db.appointments.filter(a=>a.date===ds).sort((a,b)=>a.time.localeCompare(b.time));
+  const d=new Date(ds+'T12:00:00');
+  const dayName=TR_DAYS[(d.getDay()===0?7:d.getDay())-1];
+  document.getElementById('day-modal-title').textContent=`${dayName}, ${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
+  document.getElementById('day-add-btn').onclick=()=>{closeModal('ov-day');openApptForSlot(ds,'09:00');};
+  let html='';
+  if(!appts.length){
+    html='<div class="empty"><div class="empty-icon">📅</div><p>Bu gün randevu yok</p></div>';
+  } else {
+    appts.forEach(a=>{
+      html+=`<div class="appt-chip" onclick="editAppt('${a.id}')">`;
+      html+=`<div class="appt-time">${a.time}</div>`;
+      html+=`<div class="appt-dot"></div>`;
+      html+=`<div class="appt-info"><div class="appt-name">${a.patientName||'İsimsiz'}</div>`;
+      if(a.notes) html+=`<div class="appt-note">${a.notes}</div>`;
+      html+='</div></div>';
+    });
+  }
+  document.getElementById('day-modal-body').innerHTML=html;
+  openModal('ov-day');
+}
+
+function openApptForSlot(ds,time){
+  openApptModal();
+  document.getElementById('appt-date').value=ds;
+  document.getElementById('appt-time').value=time;
+}
+
+function openApptModal(){
+  document.getElementById('appt-edit-id').value='';
+  document.getElementById('appt-modal-title').textContent='Randevu Ekle';
+  document.getElementById('appt-patient').value='';
+  document.getElementById('appt-date').value=dateStr(new Date());
+  document.getElementById('appt-time').value='09:00';
+  document.getElementById('appt-note').value='';
+  document.getElementById('appt-del-btn').style.display='none';
+  // Fill datalist
+  const dl=document.getElementById('patient-datalist');
+  dl.innerHTML=db.patients.map(p=>`<option value="${p.name}">`).join('');
+  openModal('ov-appt');
+}
+
+function editAppt(id){
+  const a=db.appointments.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('appt-edit-id').value=id;
+  document.getElementById('appt-modal-title').textContent='Randevu Düzenle';
+  document.getElementById('appt-patient').value=a.patientName||'';
+  document.getElementById('appt-date').value=a.date;
+  document.getElementById('appt-time').value=a.time;
+  document.getElementById('appt-note').value=a.notes||'';
+  document.getElementById('appt-del-btn').style.display='flex';
+  closeModal('ov-day');
+  openModal('ov-appt');
+}
+
+function saveAppt(){
+  const patientName=document.getElementById('appt-patient').value.trim();
+  const date=document.getElementById('appt-date').value;
+  const time=document.getElementById('appt-time').value;
+  if(!date||!time){showToast('Tarih ve saat gerekli');return;}
+  const editId=document.getElementById('appt-edit-id').value;
+  if(editId){
+    const a=db.appointments.find(x=>x.id===editId);
+    if(a){Object.assign(a,{patientName,date,time,notes:document.getElementById('appt-note').value.trim()});}
+  } else {
+    db.appointments.push({id:uid(),patientName,date,time,notes:document.getElementById('appt-note').value.trim()});
+  }
+  saveDB('appointments');
+  closeModal('ov-appt');
+  renderCalendar();
+  showToast('Randevu kaydedildi');
+}
+
+function deleteAppt(){
+  const id=document.getElementById('appt-edit-id').value;
+  db.appointments=db.appointments.filter(a=>a.id!==id);
+  saveDB('appointments');
+  closeModal('ov-appt');
+  renderCalendar();
+  showToast('Randevu silindi');
+}
+
+// ==================== PATIENTS ====================
+let patientSort='name';
+let patientSearch='';
+
+function renderPatients(list){
+  const pts=list||getFilteredPatients();
+  document.getElementById('patient-count').textContent=pts.length+' hasta';
+  if(!pts.length){
+    document.getElementById('patient-list').innerHTML='<div class="empty"><div class="empty-icon">👤</div><p>Henüz hasta kaydı yok</p></div>';
+    return;
+  }
+  document.getElementById('patient-list').innerHTML=pts.map(p=>{
+    const initials=p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const lastProc=getLastProcDate(p.id);
+    return `<div class="pi" onclick="showPatientMenu(event,'${p.id}')">
+      <div class="av${p.gender==='K'?' f':''}">${initials}</div>
+      <div style="flex:1">
+        <div class="pname">${p.name}</div>
+        <div class="psub">${lastProc?'Son işlem: '+formatDate(lastProc):'Kayıt: '+formatDate(p.createdAt)}</div>
+      </div>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ccc" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`;
+  }).join('');
+}
+
+function getFilteredPatients(){
+  let pts=[...db.patients];
+  if(patientSearch) pts=pts.filter(p=>p.name.toLowerCase().includes(patientSearch.toLowerCase()));
+  if(patientSort==='name') pts.sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  else pts.sort((a,b)=>{
+    const la=getLastProcDate(a.id)||a.createdAt||'';
+    const lb=getLastProcDate(b.id)||b.createdAt||'';
+    return lb.localeCompare(la);
+  });
+  return pts;
+}
+
+function getLastProcDate(pid){
+  const procs=db.procedures.filter(p=>p.patientId===pid);
+  if(!procs.length) return null;
+  return procs.sort((a,b)=>b.date.localeCompare(a.date))[0].date;
+}
+
+function searchPatients(v){patientSearch=v;renderPatients();}
+
+function showSortMenu(e){
+  closeAllPopups();
+  const menu=document.createElement('div');
+  menu.className='popup';
+  menu.id='sort-popup';
+  menu.innerHTML=`
+    <div class="popup-item" onclick="setSort('name')">📝 İsme Göre${patientSort==='name'?' ✓':''}</div>
+    <div class="popup-item" onclick="setSort('date')">📅 Son İşlem Tarihine Göre${patientSort==='date'?' ✓':''}</div>
+  `;
+  const r=e.target.getBoundingClientRect();
+  menu.style.cssText=`top:${r.bottom+4}px;right:14px`;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',closeAllPopups,{once:true}),10);
+}
+
+function setSort(v){patientSort=v;renderPatients();closeAllPopups();}
+
+function showPatientMenu(e,pid){
+  e.stopPropagation();
+  closeAllPopups();
+  const p=db.patients.find(x=>x.id===pid);
+  if(!p) return;
+  const menu=document.createElement('div');
+  menu.className='popup';
+  menu.id='patient-popup';
+  menu.innerHTML=`
+    <div class="popup-item" onclick="openPatientFile('${pid}','preview')">👁 Önizleme</div>
+    <div class="popup-item" onclick="openPatientFile('${pid}','new')">➕ Yeni Kayıt</div>
+    <div class="popup-item" onclick="openPatientFile('${pid}','control')">🔄 Kontrol</div>
+  `;
+  const r=e.currentTarget.getBoundingClientRect();
+  const top=Math.min(r.top,window.innerHeight-160);
+  menu.style.cssText=`top:${top}px;right:14px`;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',closeAllPopups,{once:true}),10);
+}
+
+function openPatientFile(pid,mode){
+  closeAllPopups();
+  const p=db.patients.find(x=>x.id===pid);
+  if(!p) return;
+  currentPatientId=pid;
+  document.getElementById('pfile-title').textContent=p.name;
+
+  let html='';
+  // Anamnez
+  html+=`<div class="sec-lbl" style="padding-top:8px">Anamnez Bilgileri</div>`;
+  const fields=[
+    ['Cinsiyet',p.gender==='K'?'Kadın':'Erkek'],
+    ['TC Kimlik',p.tc||'—'],
+    ['Doğum Tarihi',p.dob?formatDate(p.dob):'—'],
+    ['Telefon',p.phone||'—'],
+    ['Şikayet',p.complaint||'—'],
+    ['Kronik Hastalık',p.chronic&&p.chronic.has==='Var'?`Var: ${p.chronic.detail}`:'Yok'],
+    ['İlaçlar',p.meds&&p.meds.has==='Var'?`Var: ${p.meds.detail}`:'Yok'],
+    ['Alerji',p.allergy&&p.allergy.has==='Var'?`Var: ${p.allergy.detail}`:'Yok'],
+    ['Kan Sulandırıcı',p.blood&&p.blood.has==='Var'?`Var: ${p.blood.detail}`:'Yok'],
+    ['Bulaşıcı Hastalık',p.infect&&p.infect.has==='Var'?`Var: ${p.infect.detail}`:'Yok'],
+    ['Geçirilmiş Ameliyat',p.surgery&&p.surgery.has==='Var'?`Var: ${p.surgery.detail}`:'Yok'],
+    ['Önceki Estetik İşlem',p.aesthetic&&p.aesthetic.has==='Var'?`Var: ${p.aesthetic.detail}`:'Yok']
+  ];
+  if(p.gender==='K'){
+    fields.push(['Gebelik',p.pregnancy||'Yok'],['Emzirme',p.breastfeed||'Yok']);
+  }
+  html+=fields.map(([l,v])=>`<div class="il"><div class="il-lbl">${l}</div><div class="il-val">${v}</div></div>`).join('');
+
+  // Procedure history
+  const procs=db.procedures.filter(x=>x.patientId===pid).sort((a,b)=>b.date.localeCompare(a.date));
+  html+=`<div class="sec-lbl">İşlem Geçmişi (${procs.length})</div>`;
+  if(procs.length){
+    procs.forEach(proc=>{
+      html+=`<div class="hist-item">
+        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
+        <div class="hist-date">${formatDate(proc.date)}${proc.notes?' · '+proc.notes:''}</div>
+      </div>`;
+    });
+  } else {
+    html+='<div style="padding:16px 14px;color:var(--tl);font-size:13px">Henüz işlem kaydı yok</div>';
+  }
+  html+='<div style="height:10px"></div>';
+  document.getElementById('pfile-body').innerHTML=html;
+
+  // Footer buttons based on mode
+  let footerHtml='';
+  if(mode==='new'||mode==='control'){
+    footerHtml=`<button class="btn btn-p btn-full" onclick="openProcForPatient('${pid}')">+ Yeni İşlem Ekle</button>`;
+  } else {
+    footerHtml=`<button class="btn btn-p btn-full" onclick="closeModal('ov-patient-file')">Kapat</button>`;
+  }
+  document.getElementById('pfile-footer').innerHTML=footerHtml;
+  openModal('ov-patient-file');
+}
+
+let currentPatientId=null;
+
+function openProcForPatient(pid){
+  closeModal('ov-patient-file');
+  const p=db.patients.find(x=>x.id===pid);
+  if(!p) return;
+  // Open procedure record modal pre-filled with patient
+  document.getElementById('pr-patient-input').value=p.name;
+  document.getElementById('pr-type-id').value='';
+  document.getElementById('pr-type-name').value='';
+  document.getElementById('pr-modal-title').textContent='Yeni İşlem – '+p.name;
+  document.getElementById('pr-date').value=dateStr(new Date());
+  document.getElementById('pr-price').value='';
+  document.getElementById('pr-notes').value='';
+  fillProcPatientList();
+  openModal('ov-proc-record');
+}
+
+function editCurrentPatient(){
+  closeModal('ov-patient-file');
+  const p=db.patients.find(x=>x.id===currentPatientId);
+  if(!p) return;
+  openEditPatientModal(p);
+}
+
+// New patient modal
+let npGender='K';
+let npToggleState={};
+
+function openNewPatientModal(){
+  npGender='K';
+  npToggleState={};
+  document.getElementById('np-edit-id').value='';
+  document.getElementById('np-modal-title').textContent='Yeni Hasta';
+  document.getElementById('np-name').value='';
+  document.getElementById('np-tc').value='';
+  document.getElementById('np-dob').value='';
+  document.getElementById('np-phone').value='';
+  document.getElementById('np-complaint').value='';
+  // Reset all toggle buttons and detail fields
+  document.querySelectorAll('#np-form-body .tg-grp').forEach(g=>{
+    g.querySelectorAll('.tg-btn').forEach((b,i)=>{
+      b.className='tg-btn'+(i===0?' no':'');
+    });
+  });
+  document.querySelectorAll('#np-form-body textarea').forEach(t=>{ t.value=''; t.style.display='none'; });
+  document.getElementById('np-gen-k').className='tg-btn yes';
+  document.getElementById('np-gen-e').className='tg-btn';
+  document.getElementById('np-pregnancy-group').style.display='block';
+  document.getElementById('np-breastfeed-group').style.display='block';
+  openModal('ov-new-patient');
+}
+
+function openEditPatientModal(p){
+  npGender=p.gender||'K';
+  document.getElementById('np-edit-id').value=p.id;
+  document.getElementById('np-modal-title').textContent='Hasta Düzenle';
+  document.getElementById('np-name').value=p.name||'';
+  document.getElementById('np-tc').value=p.tc||'';
+  document.getElementById('np-dob').value=p.dob||'';
+  document.getElementById('np-phone').value=p.phone||'';
+  document.getElementById('np-complaint').value=p.complaint||'';
+  // Gender
+  document.getElementById('np-gen-k').className='tg-btn'+(npGender==='K'?' yes':'');
+  document.getElementById('np-gen-e').className='tg-btn'+(npGender==='E'?' yes':'');
+  document.getElementById('np-pregnancy-group').style.display=npGender==='K'?'block':'none';
+  document.getElementById('np-breastfeed-group').style.display=npGender==='K'?'block':'none';
+  // Set toggle fields
+  const fields=[
+    {grp:'chronic',detailId:'np-chronic-detail',val:p.chronic},
+    {grp:'meds',detailId:'np-meds-detail',val:p.meds},
+    {grp:'allergy',detailId:'np-allergy-detail',val:p.allergy},
+    {grp:'blood',detailId:'np-blood-detail',val:p.blood},
+    {grp:'infect',detailId:'np-infect-detail',val:p.infect},
+    {grp:'surgery',detailId:'np-surgery-detail',val:p.surgery},
+    {grp:'aesthetic',detailId:'np-aesthetic-detail',val:p.aesthetic}
+  ];
+  // Simple reset first
+  document.querySelectorAll('#np-form-body .fg').forEach(fg=>{
+    const tgBtns=fg.querySelectorAll('.tg-btn');
+    if(tgBtns.length===2&&tgBtns[0].textContent==='Yok'){
+      tgBtns[0].className='tg-btn no';
+      tgBtns[1].className='tg-btn';
+    }
+  });
+  fields.forEach(({detailId,val})=>{
+    const det=document.getElementById(detailId);
+    if(!det) return;
+    if(val&&val.has==='Var'){
+      det.style.display='block';
+      det.value=val.detail||'';
+      const fg=det.closest('.fg');
+      if(fg){
+        const btns=fg.querySelectorAll('.tg-btn');
+        btns[0].className='tg-btn no';
+        btns[1].className='tg-btn yes';
+      }
+    }
+  });
+  // Pregnancy/breastfeed
+  if(p.pregnancy==='Var'){document.getElementById('np-preg-yes').className='tg-btn yes';document.getElementById('np-preg-no').className='tg-btn';}
+  else{document.getElementById('np-preg-no').className='tg-btn no';document.getElementById('np-preg-yes').className='tg-btn';}
+  if(p.breastfeed==='Var'){document.getElementById('np-bf-yes').className='tg-btn yes';document.getElementById('np-bf-no').className='tg-btn';}
+  else{document.getElementById('np-bf-no').className='tg-btn no';document.getElementById('np-bf-yes').className='tg-btn';}
+  openModal('ov-new-patient');
+}
+
+function setGender(g){
+  npGender=g;
+  document.getElementById('np-gen-k').className='tg-btn'+(g==='K'?' yes':'');
+  document.getElementById('np-gen-e').className='tg-btn'+(g==='E'?' yes':'');
+  document.getElementById('np-pregnancy-group').style.display=g==='K'?'block':'none';
+  document.getElementById('np-breastfeed-group').style.display=g==='K'?'block':'none';
+}
+
+function toggleField(btn,detailId,value){
+  const fg=btn.closest('.fg');
+  const btns=fg.querySelectorAll('.tg-btn');
+  btns.forEach(b=>b.className='tg-btn');
+  const isYes=value==='Var';
+  btn.className='tg-btn'+(isYes?' yes':' no');
+  const det=document.getElementById(detailId);
+  if(det) det.style.display=isYes?'block':'none';
+}
+
+function setToggle(field,value){
+  if(field==='pregnancy'){
+    document.getElementById('np-preg-yes').className='tg-btn'+(value==='Var'?' yes':'');
+    document.getElementById('np-preg-no').className='tg-btn'+(value==='Yok'?' no':'');
+  } else {
+    document.getElementById('np-bf-yes').className='tg-btn'+(value==='Var'?' yes':'');
+    document.getElementById('np-bf-no').className='tg-btn'+(value==='Yok'?' no':'');
+  }
+}
+
+function getToggleFieldValue(detailId){
+  const det=document.getElementById(detailId);
+  if(!det) return {has:'Yok',detail:''};
+  const fg=det.closest('.fg');
+  const yesBtn=fg.querySelectorAll('.tg-btn')[1];
+  const has=yesBtn&&yesBtn.classList.contains('yes')?'Var':'Yok';
+  return {has,detail:has==='Var'?det.value.trim():''};
+}
+
+function getSimpleToggle(yesId,noId){
+  const yes=document.getElementById(yesId);
+  return yes&&yes.classList.contains('yes')?'Var':'Yok';
+}
+
+function savePatient(){
+  const name=document.getElementById('np-name').value.trim();
+  if(!name){showToast('Ad Soyad zorunludur');return;}
+  const editId=document.getElementById('np-edit-id').value;
+  const pData={
+    name,
+    gender:npGender,
+    tc:document.getElementById('np-tc').value.trim(),
+    dob:document.getElementById('np-dob').value,
+    phone:document.getElementById('np-phone').value.trim(),
+    complaint:document.getElementById('np-complaint').value.trim(),
+    chronic:getToggleFieldValue('np-chronic-detail'),
+    meds:getToggleFieldValue('np-meds-detail'),
+    allergy:getToggleFieldValue('np-allergy-detail'),
+    blood:getToggleFieldValue('np-blood-detail'),
+    infect:getToggleFieldValue('np-infect-detail'),
+    surgery:getToggleFieldValue('np-surgery-detail'),
+    aesthetic:getToggleFieldValue('np-aesthetic-detail'),
+    pregnancy:npGender==='K'?getSimpleToggle('np-preg-yes','np-preg-no'):'—',
+    breastfeed:npGender==='K'?getSimpleToggle('np-bf-yes','np-bf-no'):'—'
+  };
+  if(editId){
+    const idx=db.patients.findIndex(x=>x.id===editId);
+    if(idx>=0) Object.assign(db.patients[idx],pData);
+  } else {
+    pData.id=uid();
+    pData.createdAt=dateStr(new Date());
+    db.patients.push(pData);
+  }
+  saveDB('patients');
+  closeModal('ov-new-patient');
+  renderPatients();
+  showToast(editId?'Hasta güncellendi':'Hasta eklendi');
+}
+
+// ==================== İŞLEMLER ====================
+function setIslemView(v,btn){
+  document.getElementById('islem-genel').style.display=v==='genel'?'block':'none';
+  document.getElementById('islem-recent').style.display=v==='recent'?'block':'none';
+  document.querySelectorAll('.seg .sbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(v==='recent') renderRecentProcs();
+}
+
+function renderIslemler(){
+  renderGenelIslemler();
+  if(document.getElementById('islem-recent').style.display!=='none') renderRecentProcs();
+}
+
+function renderGenelIslemler(){
+  const el=document.getElementById('islem-genel');
+  let html='<div style="padding-bottom:20px">';
+  CATS.forEach(cat=>{
+    html+=`<div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-icon">${cat.icon}</div>
+        <div class="acc-title">${cat.name}</div>
+        <div class="acc-arrow">▼</div>
+      </div>
+      <div class="acc-body">`;
+    if(cat.subs.length){
+      cat.subs.forEach(sub=>{
+        const typeId=cat.id+'::'+sub;
+        const typeName=cat.name+' – '+sub;
+        html+=`<div class="acc-sub" onclick="openProcRecordModal('${typeId}','${typeName}')">
+          <div class="acc-sub-name">${sub}</div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>`;
+      });
+    } else {
+      html+=`<div class="acc-sub" onclick="openProcRecordModal('${cat.id}','${cat.name}')">
+        <div class="acc-sub-name">${cat.name} Kaydı Ekle</div>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>`;
+    }
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function renderRecentProcs(){
+  const el=document.getElementById('islem-recent');
+  const procs=[...db.procedures].sort((a,b)=>b.date.localeCompare(a.date));
+  if(!procs.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Henüz işlem kaydı yok</p></div>';
+    return;
+  }
+  let html='<div style="padding-bottom:20px">';
+  procs.forEach(proc=>{
+    html+=`<div class="rp-item">
+      <div class="rp-date">${formatDate(proc.date)}</div>
+      <div style="flex:1"><div class="rp-proc">${proc.typeName||proc.typeId}</div>
+      <div class="rp-name" onclick="showProcPrice('${proc.id}')">${proc.patientName||'—'}</div></div>
+    </div>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function openProcRecordModal(typeId,typeName){
+  document.getElementById('pr-type-id').value=typeId;
+  document.getElementById('pr-type-name').value=typeName;
+  document.getElementById('pr-modal-title').textContent=typeName;
+  document.getElementById('pr-patient-input').value='';
+  document.getElementById('pr-date').value=dateStr(new Date());
+  document.getElementById('pr-price').value='';
+  document.getElementById('pr-notes').value='';
+  fillProcPatientList();
+  openModal('ov-proc-record');
+}
+
+function fillProcPatientList(){
+  document.getElementById('pr-patient-list').innerHTML=db.patients.map(p=>`<option value="${p.name}">`).join('');
+}
+
+function saveProcRecord(){
+  const typeId=document.getElementById('pr-type-id').value;
+  const typeName=document.getElementById('pr-type-name').value;
+  const patientName=document.getElementById('pr-patient-input').value.trim();
+  const date=document.getElementById('pr-date').value;
+  const price=document.getElementById('pr-price').value;
+  if(!patientName||!date){showToast('Hasta adı ve tarih gerekli');return;}
+  const patient=db.patients.find(p=>p.name.toLowerCase()===patientName.toLowerCase());
+  db.procedures.push({
+    id:uid(),
+    patientId:patient?patient.id:null,
+    patientName,
+    typeId,
+    typeName,
+    date,
+    price:price?parseFloat(price):0,
+    notes:document.getElementById('pr-notes').value.trim()
+  });
+  saveDB('procedures');
+  closeModal('ov-proc-record');
+  renderRecentProcs();
+  showToast('İşlem kaydedildi');
+}
+
+function showProcPrice(procId){
+  const proc=db.procedures.find(x=>x.id===procId);
+  if(!proc) return;
+  document.getElementById('pv-title').textContent=proc.patientName;
+  let html=`<div style="text-align:center;padding:20px 0">
+    <div style="font-size:13px;color:var(--tl);margin-bottom:8px">${proc.typeName||proc.typeId}</div>
+    <div style="font-size:13px;color:var(--tl);margin-bottom:16px">${formatDate(proc.date)}</div>
+    <div style="font-size:32px;font-weight:800;color:var(--p)">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'Belirtilmemiş'}</div>
+  </div>`;
+  if(proc.notes) html+=`<div style="text-align:center;font-size:13px;color:var(--tl);padding:0 10px 16px">${proc.notes}</div>`;
+  document.getElementById('pv-body').innerHTML=html;
+  openModal('ov-price-view');
+}
+
+function toggleAcc(head){
+  const body=head.nextElementSibling;
+  const arrow=head.querySelector('.acc-arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+// ==================== FİYATLAMA ====================
+let fiyatCurrentCat=null;
+let fiyatCurrentSub=null;
+let fiyatCurrentQtys={};
+
+function renderFiyatlama(){
+  const el=document.getElementById('fiyatlama-content');
+  let html='<div style="padding-bottom:30px">';
+  html+='<div style="padding:12px 14px 4px;font-size:13px;color:var(--tl)">Bir işlem seçerek seans fiyatını hesaplayın.</div>';
+  CATS.forEach(cat=>{
+    html+=`<div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-icon">${cat.icon}</div>
+        <div class="acc-title">${cat.name}</div>
+        <div class="acc-arrow">▼</div>
+      </div>
+      <div class="acc-body">`;
+    const items=cat.subs.length?cat.subs:[cat.name];
+    items.forEach(sub=>{
+      const key=cat.id+(cat.subs.length?'::'+sub:'');
+      const tmpl=db.fiyatTemplates[key];
+      const price=tmpl&&tmpl.sessionPrice?'₺'+Number(tmpl.sessionPrice).toLocaleString('tr-TR'):'';
+      html+=`<div class="acc-sub" onclick="openFiyatDetail('${cat.id}','${sub}','${cat.name}')">
+        <div class="acc-sub-name">${sub}</div>
+        ${price?`<div style="font-size:13px;font-weight:700;color:var(--p)">${price}</div>`:''}
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>`;
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function openFiyatDetail(catId,sub,catName){
+  fiyatCurrentCat=catId;
+  fiyatCurrentSub=sub;
+  const key=catId+(sub!==catName?'::'+sub:'');
+  const tmpl=db.fiyatTemplates[key]||{};
+  fiyatCurrentQtys=Object.assign({},tmpl.qtys||{});
+  const title=catName===sub?catName:catName+' – '+sub;
+  document.getElementById('fd-title').textContent=title;
+
+  // Get relevant products for this category
+  const catProducts=db.products.filter(p=>{
+    if(catId==='botoks') return p.cat==='botoks';
+    if(catId==='mezoterapi') return p.cat==='mezoterapi-yuz'||p.cat==='mezoterapi-sac';
+    if(catId==='dolgu') return p.cat==='dolgu';
+    if(catId==='sivi-yuz') return p.cat==='sivi-yuz';
+    if(catId==='lipoliz') return p.cat==='lipoliz';
+    if(catId==='iv') return p.cat==='iv';
+    return false;
+  });
+
+  const labor=db.settings.laborMult*db.settings.euroRate;
+  const sarfCost=parseFloat(db.settings.sarfCost)||0;
+
+  let html='';
+  if(catProducts.length){
+    html+='<div style="margin-bottom:10px;font-size:13px;color:var(--tl);padding:0 0 8px">Ürün miktarlarını girin:</div>';
+    catProducts.forEach(prod=>{
+      html+=`<div class="pr-row">
+        <div class="pr-pname">${prod.name}</div>
+        <input type="number" class="pr-qty" id="fq-${prod.id}" value="${fiyatCurrentQtys[prod.id]||''}" placeholder="0" min="0" step="0.1" oninput="updateFiyatTotal()">
+        <div class="pr-unit">${prod.unit}</div>
+      </div>`;
+    });
+  }
+  html+='<div id="fd-total-box"></div>';
+  document.getElementById('fd-body').innerHTML=html;
+
+  // Store product list for calculation
+  document.getElementById('fd-body').dataset.products=JSON.stringify(catProducts.map(p=>({id:p.id,unit:p.unit,price:p.price})));
+  document.getElementById('fd-body').dataset.key=key;
+  updateFiyatTotal();
+  openModal('ov-fiyat-detail');
+}
+
+function updateFiyatTotal(){
+  const body=document.getElementById('fd-body');
+  const products=JSON.parse(body.dataset.products||'[]');
+  let total=0;
+  const qtys={};
+  products.forEach(p=>{
+    const el=document.getElementById('fq-'+p.id);
+    const qty=el?parseFloat(el.value)||0:0;
+    if(qty>0){
+      qtys[p.id]=qty;
+      total+=qty*(parseFloat(p.price)||0);
+    }
+  });
+  fiyatCurrentQtys=qtys;
+  const labor=db.settings.laborMult*(parseFloat(db.settings.euroRate)||0);
+  const sarfCost=parseFloat(db.settings.sarfCost)||0;
+  const sessionPrice=total+labor+sarfCost;
+  document.getElementById('fd-total-box').innerHTML=`
+    <div class="pr-box" style="margin:16px 0 0">
+      <div class="pr-label">Seans Ücreti</div>
+      <div class="pr-amount">₺${sessionPrice.toLocaleString('tr-TR',{maximumFractionDigits:0})}</div>
+    </div>`;
+}
+
+function saveFiyatTemplate(){
+  const body=document.getElementById('fd-body');
+  const key=body.dataset.key;
+  const products=JSON.parse(body.dataset.products||'[]');
+  const labor=db.settings.laborMult*(parseFloat(db.settings.euroRate)||0);
+  const sarfCost=parseFloat(db.settings.sarfCost)||0;
+  let materialCost=0;
+  Object.entries(fiyatCurrentQtys).forEach(([id,qty])=>{
+    const prod=products.find(p=>p.id===id);
+    if(prod) materialCost+=qty*(parseFloat(prod.price)||0);
+  });
+  const sessionPrice=materialCost+labor+sarfCost;
+  db.fiyatTemplates[key]={qtys:fiyatCurrentQtys,sessionPrice};
+  saveDB('fiyatTemplates');
+  closeModal('ov-fiyat-detail');
+  renderFiyatlama();
+  showToast('Fiyat kaydedildi');
+}
+
+// ==================== MALİYET ====================
+let maliyetUnlocked=false;
+let pinInput='';
+let maliyetView='urunler';
+
+function renderMaliyet(){
+  if(!maliyetUnlocked){
+    document.getElementById('pin-screen').style.display='flex';
+    document.getElementById('maliyet-content').style.display='none';
+    renderPinKeypad();
+    pinInput='';
+    updatePinDots();
+  } else {
+    showMaliyetContent();
+  }
+}
+
+function renderPinKeypad(){
+  const kp=document.getElementById('pin-kp');
+  const keys=[['1','2','3'],['4','5','6'],['7','8','9'],['','0','⌫']];
+  kp.innerHTML=keys.flat().map(k=>`<div class="pin-k" onclick="pinPress('${k}')">${k}</div>`).join('');
+}
+
+function pinPress(k){
+  if(k==='') return;
+  if(k==='⌫'){pinInput=pinInput.slice(0,-1);}
+  else if(pinInput.length<4){pinInput+=k;}
+  updatePinDots();
+  if(pinInput.length===4){
+    setTimeout(()=>{
+      if(pinInput===db.settings.pin){
+        maliyetUnlocked=true;
+        showMaliyetContent();
+      } else {
+        document.getElementById('pin-err').textContent='Yanlış şifre';
+        pinInput='';
+        updatePinDots();
+        setTimeout(()=>{document.getElementById('pin-err').textContent='';},1500);
+      }
+    },200);
+  }
+}
+
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('pd'+i);
+    if(d) d.className='pin-dot'+(i<pinInput.length?' filled':'');
+  }
+}
+
+function lockMaliyet(){
+  maliyetUnlocked=false;
+  pinInput='';
+  document.getElementById('pin-screen').style.display='flex';
+  document.getElementById('maliyet-content').style.display='none';
+  updatePinDots();
+}
+
+function showMaliyetContent(){
+  document.getElementById('pin-screen').style.display='none';
+  const mc=document.getElementById('maliyet-content');
+  mc.style.display='flex';
+  mc.style.flexDirection='column';
+  mc.style.flex='1';
+  mc.style.overflow='hidden';
+  renderEuroBar();
+  if(maliyetView==='urunler') renderMaliyetUrunler();
+  else renderMaliyetSarf();
+}
+
+function renderEuroBar(){
+  const s=db.settings;
+  const labor=(parseFloat(s.laborMult)||0)*(parseFloat(s.euroRate)||0);
+  document.getElementById('maliyet-euro-bar').innerHTML=`
+    <div class="ebox">
+      <div class="elbl">€ Kuru</div>
+      <input type="number" class="ein" value="${s.euroRate||40}" onchange="updateEuroRate(this.value)" placeholder="₺">
+      <div class="eval" style="font-size:13px">₺</div>
+    </div>
+    <div class="lbox">
+      <div class="elbl">İşçilik (×€)</div>
+      <input type="number" class="ein" value="${s.laborMult||1}" onchange="updateLaborMult(this.value)" placeholder="0" min="0">
+      <div class="lresult">= ₺${labor.toLocaleString('tr-TR',{maximumFractionDigits:0})}</div>
+    </div>`;
+}
+
+function updateEuroRate(v){
+  db.settings.euroRate=parseFloat(v)||0;
+  saveDB('settings');
+  renderEuroBar();
+}
+
+function updateLaborMult(v){
+  db.settings.laborMult=parseFloat(v)||0;
+  saveDB('settings');
+  renderEuroBar();
+}
+
+function setMaliyetView(v,btn){
+  maliyetView=v;
+  document.getElementById('maliyet-urunler').style.display=v==='urunler'?'block':'none';
+  document.getElementById('maliyet-sarf').style.display=v==='sarf'?'block':'none';
+  document.querySelectorAll('.seg .sbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(v==='urunler') renderMaliyetUrunler();
+  else renderMaliyetSarf();
+}
+
+function renderMaliyetUrunler(){
+  const el=document.getElementById('maliyet-urunler');
+  let html='<div style="padding-bottom:30px">';
+  PROD_CATS.forEach(cat=>{
+    const prods=db.products.filter(p=>p.cat===cat.id);
+    html+=`<div class="acc-item">
+      <div class="acc-head" onclick="toggleAcc(this)">
+        <div class="acc-icon">${cat.icon}</div>
+        <div class="acc-title">${cat.name}</div>
+        <div class="acc-arrow">▼</div>
+      </div>
+      <div class="acc-body open">`;
+    prods.forEach(prod=>{
+      html+=`<div class="ci">
+        <div class="ci-name">${prod.name}</div>
+        <select class="ci-unit" onchange="updateProductUnit('${prod.id}',this.value)">
+          <option ${prod.unit==='adet'?'selected':''}>adet</option>
+          <option ${prod.unit==='cc'?'selected':''}>cc</option>
+          <option ${prod.unit==='ml'?'selected':''}>ml</option>
+          <option ${prod.unit==='kutu'?'selected':''}>kutu</option>
+        </select>
+        <input type="number" class="ci-price" value="${prod.price||''}" placeholder="₺ fiyat" onchange="updateProductPrice('${prod.id}',this.value)">
+        <button class="ci-del" onclick="deleteProduct('${prod.id}')">✕</button>
+      </div>`;
+    });
+    html+=`<div style="padding:8px 14px;border-top:1px solid var(--b)">
+      <button class="btn btn-sec btn-sm btn-full" onclick="openAddProductModal('${cat.id}')">+ Ürün Ekle</button>
+    </div>`;
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function updateProductUnit(id,v){
+  const p=db.products.find(x=>x.id===id);
+  if(p){p.unit=v;saveDB('products');}
+}
+
+function updateProductPrice(id,v){
+  const p=db.products.find(x=>x.id===id);
+  if(p){p.price=parseFloat(v)||0;saveDB('products');}
+}
+
+function deleteProduct(id){
+  db.products=db.products.filter(x=>x.id!==id);
+  saveDB('products');
+  renderMaliyetUrunler();
+}
+
+function openAddProductModal(catId){
+  document.getElementById('ap-category').value=catId;
+  document.getElementById('ap-name').value='';
+  document.getElementById('ap-unit').value='adet';
+  document.getElementById('ap-price').value='';
+  openModal('ov-add-product');
+}
+
+function saveNewProduct(){
+  const name=document.getElementById('ap-name').value.trim();
+  if(!name){showToast('Ürün adı gerekli');return;}
+  const catId=document.getElementById('ap-category').value;
+  db.products.push({
+    id:'custom-'+uid(),
+    name,
+    cat:catId,
+    unit:document.getElementById('ap-unit').value,
+    price:parseFloat(document.getElementById('ap-price').value)||0
+  });
+  saveDB('products');
+  closeModal('ov-add-product');
+  renderMaliyetUrunler();
+  showToast('Ürün eklendi');
+}
+
+function renderMaliyetSarf(){
+  const el=document.getElementById('maliyet-sarf');
+  const sarfCost=db.settings.sarfCost||0;
+  let html='<div style="padding-bottom:30px">';
+  html+=`<div class="sarf-cost-box">
+    <div class="sarf-cost-lbl">İşlem Sarf Maliyeti</div>
+    <input type="number" class="sarf-cost-in" value="${sarfCost}" placeholder="₺" onchange="updateSarfCost(this.value)">
+  </div>`;
+  db.consumables.forEach(c=>{
+    html+=`<div class="ci">
+      <div class="ci-name">${c.name}</div>
+      <select class="ci-unit" onchange="updateConsUnit('${c.id}',this.value)">
+        <option ${c.unit==='adet'?'selected':''}>adet</option>
+        <option ${c.unit==='cc'?'selected':''}>cc</option>
+        <option ${c.unit==='ml'?'selected':''}>ml</option>
+        <option ${c.unit==='kutu'?'selected':''}>kutu</option>
+      </select>
+      <input type="number" class="ci-price" value="${c.price||''}" placeholder="₺" onchange="updateConsPrice('${c.id}',this.value)">
+      <button class="ci-del" onclick="deleteCons('${c.id}')">✕</button>
+    </div>`;
+  });
+  html+=`<div style="padding:14px">
+    <button class="btn btn-sec btn-sm btn-full" onclick="addNewCons()">+ Sarf Malzeme Ekle</button>
+  </div>`;
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function updateSarfCost(v){
+  db.settings.sarfCost=parseFloat(v)||0;
+  saveDB('settings');
+}
+
+function updateConsUnit(id,v){
+  const c=db.consumables.find(x=>x.id===id);
+  if(c){c.unit=v;saveDB('consumables');}
+}
+
+function updateConsPrice(id,v){
+  const c=db.consumables.find(x=>x.id===id);
+  if(c){c.price=parseFloat(v)||0;saveDB('consumables');}
+}
+
+function deleteCons(id){
+  db.consumables=db.consumables.filter(x=>x.id!==id);
+  saveDB('consumables');
+  renderMaliyetSarf();
+}
+
+function addNewCons(){
+  const name=prompt('Sarf malzeme adı:');
+  if(!name||!name.trim()) return;
+  db.consumables.push({id:'cons-'+uid(),name:name.trim(),unit:'adet',price:0});
+  saveDB('consumables');
+  renderMaliyetSarf();
+}
+
+// ==================== MODALS ====================
+function openModal(id){
+  closeAllPopups();
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click',function(e){
+    if(e.target===this) this.classList.remove('open');
+  });
+});
+
+function closeAllPopups(){
+  document.querySelectorAll('.popup').forEach(p=>p.remove());
+}
+
+// ==================== UTILITIES ====================
+function formatDate(ds){
+  if(!ds) return '—';
+  try{
+    const d=new Date(ds+'T12:00:00');
+    return d.getDate()+' '+TR_MONTHS[d.getMonth()]+' '+d.getFullYear();
+  }catch(e){return ds;}
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ==================== INIT ====================
+loadDB();
+renderCalendar();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+</script>
+</body>
+</html>

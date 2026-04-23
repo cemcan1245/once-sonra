@@ -1414,15 +1414,12 @@ let pinInput='';
 let maliyetView='urunler';
 
 function renderMaliyet(){
-  if(!maliyetUnlocked){
-    document.getElementById('pin-screen').style.display='flex';
-    document.getElementById('maliyet-content').style.display='none';
-    renderPinKeypad();
-    pinInput='';
-    updatePinDots();
-  } else {
-    showMaliyetContent();
-  }
+  maliyetUnlocked=false;
+  document.getElementById('pin-screen').style.display='flex';
+  document.getElementById('maliyet-content').style.display='none';
+  renderPinKeypad();
+  pinInput='';
+  updatePinDots();
 }
 
 function renderPinKeypad(){

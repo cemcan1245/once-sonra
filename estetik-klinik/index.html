@@ -1406,7 +1406,10 @@ function openFiyatDetail(catId,sub,catName,isProdDirect){
   }
   html+='<div id="fd-total-box"></div>';
   document.getElementById('fd-body').innerHTML=html;
-  document.getElementById('fd-body').dataset.products=JSON.stringify(catProducts.map(p=>({id:p.id,unit:p.unit,price:p.price})));
+  document.getElementById('fd-body').dataset.products=JSON.stringify(catProducts.map(p=>{
+    const effectivePrice=p.priceInEuro?(p.eurPrice||0)*(parseFloat(db.settings.euroRate)||0):(p.price||0);
+    return {id:p.id,unit:p.unit,price:effectivePrice};
+  }));
   document.getElementById('fd-body').dataset.key=key;
   updateFiyatTotal();
   openModal('ov-fiyat-detail');
@@ -1423,25 +1426,20 @@ function setFiyatUnit(prodId,unit){
 function updateFiyatTotal(){
   const body=document.getElementById('fd-body');
   const products=JSON.parse(body.dataset.products||'[]');
-  let total=0;
   const qtys={};
+  const labor=db.settings.laborMult*(parseFloat(db.settings.euroRate)||0);
+  const sarfCost=parseFloat(db.settings.sarfCost)||0;
   products.forEach(p=>{
     const el=document.getElementById('fq-'+p.id);
     const qty=el?parseFloat(el.value)||0:0;
     const cost=qty*(parseFloat(p.price)||0);
-    if(qty>0){qtys[p.id]=qty;total+=cost;}
+    if(qty>0) qtys[p.id]=qty;
     const priceEl=document.getElementById('fp-'+p.id);
-    if(priceEl) priceEl.textContent=qty>0?'₺'+cost.toLocaleString('tr-TR',{maximumFractionDigits:0}):'';
+    // Her ürün için bağımsız seans ücreti: ürün maliyeti + işçilik + sarf
+    if(priceEl) priceEl.textContent=qty>0?'₺'+(cost+labor+sarfCost).toLocaleString('tr-TR',{maximumFractionDigits:0}):'';
   });
   fiyatCurrentQtys=qtys;
-  const labor=db.settings.laborMult*(parseFloat(db.settings.euroRate)||0);
-  const sarfCost=parseFloat(db.settings.sarfCost)||0;
-  const sessionPrice=total+labor+sarfCost;
-  document.getElementById('fd-total-box').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-top:2px solid var(--b);margin-top:6px">
-      <span style="font-size:14px;font-weight:600">Seans Ücreti</span>
-      <span style="font-size:18px;font-weight:800;color:var(--p)">₺${sessionPrice.toLocaleString('tr-TR',{maximumFractionDigits:0})}</span>
-    </div>`;
+  document.getElementById('fd-total-box').innerHTML='';
 }
 
 function saveFiyatTemplate(){
@@ -1768,15 +1766,25 @@ function renderMaliyetUrunler(){
       </div>
       <div class="acc-body open">`;
     prods.forEach(prod=>{
+      const isIV=cat.id==='iv';
+      const useEur=isIV&&prod.priceInEuro;
+      const tlVal=useEur?((prod.eurPrice||0)*(parseFloat(db.settings.euroRate)||0)).toLocaleString('tr-TR',{maximumFractionDigits:0}):'';
       html+=`<div class="ci">
         <div class="ci-name">${prod.name}</div>
         <select class="ci-unit" onchange="updateProductUnit('${prod.id}',this.value)">
           <option ${prod.unit==='adet'?'selected':''}>adet</option>
-          <option ${prod.unit==='cc'?'selected':''}>cc</option>
           <option ${prod.unit==='ml'?'selected':''}>ml</option>
           <option ${prod.unit==='kutu'?'selected':''}>kutu</option>
         </select>
-        <input type="number" class="ci-price" value="${prod.price||''}" placeholder="₺ fiyat" onchange="updateProductPrice('${prod.id}',this.value)">
+        ${isIV?`<div class="utg" style="flex-shrink:0">
+          <button class="utg-btn${useEur?'':' sel'}" onclick="setProdCurrency('${prod.id}','TL')">₺</button>
+          <button class="utg-btn${useEur?' sel':''}" onclick="setProdCurrency('${prod.id}','EUR')">€</button>
+        </div>`:''}
+        ${useEur
+          ?`<input type="number" class="ci-price" style="width:64px" value="${prod.eurPrice||''}" placeholder="€" oninput="updateProductPriceEur('${prod.id}',this.value)">
+            <span id="prod-tl-${prod.id}" style="font-size:11px;color:var(--tl);white-space:nowrap">= ₺${tlVal}</span>`
+          :`<input type="number" class="ci-price" value="${prod.price||''}" placeholder="₺ fiyat" onchange="updateProductPrice('${prod.id}',this.value)">`
+        }
         <button class="ci-del" onclick="deleteProduct('${prod.id}')">✕</button>
       </div>`;
     });
@@ -1797,6 +1805,31 @@ function updateProductUnit(id,v){
 function updateProductPrice(id,v){
   const p=db.products.find(x=>x.id===id);
   if(p){p.price=parseFloat(v)||0;saveDB('products');}
+}
+
+function setProdCurrency(id,currency){
+  const p=db.products.find(x=>x.id===id);
+  if(!p) return;
+  const rate=parseFloat(db.settings.euroRate)||1;
+  if(currency==='EUR'){
+    p.priceInEuro=true;
+    if(!p.eurPrice) p.eurPrice=p.price?Math.round(p.price/rate*10)/10:0;
+  } else {
+    p.priceInEuro=false;
+    if(p.eurPrice) p.price=Math.round((p.eurPrice||0)*rate);
+  }
+  saveDB('products');
+  renderMaliyetUrunler();
+}
+
+function updateProductPriceEur(id,eurVal){
+  const p=db.products.find(x=>x.id===id);
+  if(!p) return;
+  p.eurPrice=parseFloat(eurVal)||0;
+  p.price=Math.round(p.eurPrice*(parseFloat(db.settings.euroRate)||0));
+  saveDB('products');
+  const tlEl=document.getElementById('prod-tl-'+id);
+  if(tlEl) tlEl.textContent='= ₺'+p.price.toLocaleString('tr-TR',{maximumFractionDigits:0});
 }
 
 function deleteProduct(id){

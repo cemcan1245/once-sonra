@@ -134,9 +134,11 @@ textarea.fc{resize:none;min-height:75px}
 .pr-box{background:linear-gradient(135deg,var(--p),#115e6b);color:#fff;border-radius:14px;padding:18px;margin:12px 14px;text-align:center}
 .pr-amount{font-size:30px;font-weight:800}
 .pr-label{font-size:12px;opacity:.8;margin-top:4px}
-.proc-pick-item{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--b);cursor:pointer;background:#fff;-webkit-user-select:none}
+.proc-pick-cat{display:flex;align-items:center;justify-content:space-between;padding:14px 14px;border-bottom:1px solid var(--b);cursor:pointer;background:#fff;font-size:15px;font-weight:600;-webkit-user-select:none}
+.proc-pick-cat:active{background:var(--pl)}
+.proc-pick-cat .ppc-arrow{transition:transform .2s;flex-shrink:0;color:var(--tl)}
+.proc-pick-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 12px 28px;border-bottom:1px solid var(--b);cursor:pointer;background:#f8fafc;-webkit-user-select:none}
 .proc-pick-item:active{background:var(--pl)}
-.proc-pick-hdr{padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.4px;background:var(--bg)}
 .pr-row{display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--b)}
 .pr-pname{flex:1;font-size:14px}
 .pr-qty{width:65px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:14px;text-align:right;background:#fff;outline:none}
@@ -1357,25 +1359,40 @@ let procPickerTarget='proc';
 function openProcPicker(target){
   procPickerTarget=target;
   let html='';
-  db.cats.forEach(cat=>{
-    if(cat.subs&&cat.subs.length){
-      html+=`<div class="proc-pick-hdr">${cat.icon} ${cat.name}</div>`;
+  db.cats.forEach((cat,i)=>{
+    const hasSubs=cat.subs&&cat.subs.length>0;
+    if(hasSubs){
+      html+=`<div class="proc-pick-cat" onclick="togglePickerCat(${i})">
+        <span>${cat.icon} ${cat.name}</span>
+        <svg class="ppc-arrow" id="ppc-arrow-${i}" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div id="ppc-subs-${i}" style="display:none">`;
       cat.subs.forEach(sub=>{
         const enc=encodeURIComponent(sub);
         html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
           <span>${sub}</span>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </div>`;
       });
+      html+='</div>';
     } else {
-      html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}','${cat.name}')">
+      html+=`<div class="proc-pick-cat" onclick="selectProcFromPicker('${cat.id}','${cat.name}')">
         <span>${cat.icon} ${cat.name}</span>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--tl)" stroke-width="2" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
       </div>`;
     }
   });
   document.getElementById('proc-picker-body').innerHTML=html;
   openModal('ov-proc-picker');
+}
+
+function togglePickerCat(i){
+  const subs=document.getElementById('ppc-subs-'+i);
+  const arrow=document.getElementById('ppc-arrow-'+i);
+  if(!subs) return;
+  const open=subs.style.display==='block';
+  subs.style.display=open?'none':'block';
+  if(arrow) arrow.style.transform=open?'':'rotate(90deg)';
 }
 
 function selectProcFromPicker(catId,name){

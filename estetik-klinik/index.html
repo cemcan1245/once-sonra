@@ -134,6 +134,9 @@ textarea.fc{resize:none;min-height:75px}
 .pr-box{background:linear-gradient(135deg,var(--p),#115e6b);color:#fff;border-radius:14px;padding:18px;margin:12px 14px;text-align:center}
 .pr-amount{font-size:30px;font-weight:800}
 .pr-label{font-size:12px;opacity:.8;margin-top:4px}
+.proc-pick-item{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--b);cursor:pointer;background:#fff;-webkit-user-select:none}
+.proc-pick-item:active{background:var(--pl)}
+.proc-pick-hdr{padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.4px;background:var(--bg)}
 .pr-row{display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--b)}
 .pr-pname{flex:1;font-size:14px}
 .pr-qty{width:65px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:14px;text-align:right;background:#fff;outline:none}
@@ -326,6 +329,13 @@ textarea.fc{resize:none;min-height:75px}
       <input type="text" class="fc" id="appt-patient" placeholder="Ad Soyad" list="patient-datalist">
       <datalist id="patient-datalist"></datalist>
     </div>
+    <div class="fg" style="margin-top:-4px"><label class="fl">İşlem <span style="font-weight:400;text-transform:none;font-size:10px;color:var(--tl)">(opsiyonel)</span></label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="fc" id="appt-proc" placeholder="İşlem yazın..." list="appt-proc-datalist" style="flex:1">
+        <datalist id="appt-proc-datalist"></datalist>
+        <button type="button" class="btn btn-sec btn-sm" style="flex-shrink:0;padding:0 12px" onclick="openProcPicker('appt')">Seç</button>
+      </div>
+    </div>
     <div class="fr2">
       <div class="fg"><label class="fl">Tarih</label><input type="date" class="fc" id="appt-date"></div>
       <div class="fg"><label class="fl">Saat</label><input type="time" class="fc" id="appt-time" value="09:00"></div>
@@ -437,10 +447,16 @@ textarea.fc{resize:none;min-height:75px}
 <div class="overlay" id="ov-proc-record">
 <div class="modal">
   <div class="mdrag"></div>
-  <div class="mhead"><div class="mtitle" id="pr-modal-title">Yeni İşlem Kaydı</div><button class="mclose" onclick="closeModal('ov-proc-record')">×</button></div>
+  <div class="mhead"><div class="mtitle" id="pr-modal-title">İşlem Kaydı</div><button class="mclose" onclick="closeModal('ov-proc-record')">×</button></div>
   <div class="mbody">
     <input type="hidden" id="pr-type-id">
-    <input type="hidden" id="pr-type-name">
+    <input type="hidden" id="pr-edit-id">
+    <div class="fg"><label class="fl">İşlem</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="fc" id="pr-type-name" placeholder="İşlem seçin veya yazın..." style="flex:1">
+        <button type="button" class="btn btn-sec btn-sm" style="flex-shrink:0;padding:0 12px" onclick="openProcPicker('proc')">Seç</button>
+      </div>
+    </div>
     <div class="fg"><label class="fl">Hasta</label>
       <input type="text" class="fc" id="pr-patient-input" placeholder="Hasta adı..." list="pr-patient-list">
       <datalist id="pr-patient-list"></datalist>
@@ -452,8 +468,18 @@ textarea.fc{resize:none;min-height:75px}
     <div class="fg"><label class="fl">Not</label><textarea class="fc" id="pr-notes" placeholder="İşlem notu..." rows="3"></textarea></div>
   </div>
   <div class="mfooter">
-    <button class="btn btn-p btn-full" onclick="saveProcRecord()">Kaydet</button>
+    <button class="btn btn-err btn-sm" id="pr-del-btn" style="display:none" onclick="deleteProcFromModal()">Sil</button>
+    <button class="btn btn-p" style="flex:1" onclick="saveProcRecord()">Kaydet</button>
   </div>
+</div>
+</div>
+
+<!-- Proc Picker Modal -->
+<div class="overlay" id="ov-proc-picker">
+<div class="modal" style="max-height:75vh">
+  <div class="mdrag"></div>
+  <div class="mhead"><div class="mtitle">İşlem Seç</div><button class="mclose" onclick="closeModal('ov-proc-picker')">×</button></div>
+  <div class="mbody" id="proc-picker-body" style="padding:0"></div>
 </div>
 </div>
 
@@ -834,14 +860,24 @@ function openApptModal(){
   document.getElementById('appt-edit-id').value='';
   document.getElementById('appt-modal-title').textContent='Randevu Ekle';
   document.getElementById('appt-patient').value='';
+  document.getElementById('appt-proc').value='';
   document.getElementById('appt-date').value=dateStr(new Date());
   document.getElementById('appt-time').value='09:00';
   document.getElementById('appt-note').value='';
   document.getElementById('appt-del-btn').style.display='none';
-  // Fill datalist
   const dl=document.getElementById('patient-datalist');
   dl.innerHTML=db.patients.map(p=>`<option value="${p.name}">`).join('');
+  fillApptProcDatalist();
   openModal('ov-appt');
+}
+
+function fillApptProcDatalist(){
+  const names=[];
+  db.cats.forEach(cat=>{
+    if(cat.subs&&cat.subs.length) cat.subs.forEach(s=>names.push(s));
+    else names.push(cat.name);
+  });
+  document.getElementById('appt-proc-datalist').innerHTML=names.map(n=>`<option value="${n}">`).join('');
 }
 
 function editAppt(id){
@@ -850,25 +886,28 @@ function editAppt(id){
   document.getElementById('appt-edit-id').value=id;
   document.getElementById('appt-modal-title').textContent='Randevu Düzenle';
   document.getElementById('appt-patient').value=a.patientName||'';
+  document.getElementById('appt-proc').value=a.procedure||'';
   document.getElementById('appt-date').value=a.date;
   document.getElementById('appt-time').value=a.time;
   document.getElementById('appt-note').value=a.notes||'';
   document.getElementById('appt-del-btn').style.display='flex';
+  fillApptProcDatalist();
   closeModal('ov-day');
   openModal('ov-appt');
 }
 
 function saveAppt(){
   const patientName=document.getElementById('appt-patient').value.trim();
+  const procedure=document.getElementById('appt-proc').value.trim();
   const date=document.getElementById('appt-date').value;
   const time=document.getElementById('appt-time').value;
   if(!date||!time){showToast('Tarih ve saat gerekli');return;}
   const editId=document.getElementById('appt-edit-id').value;
   if(editId){
     const a=db.appointments.find(x=>x.id===editId);
-    if(a){Object.assign(a,{patientName,date,time,notes:document.getElementById('appt-note').value.trim()});}
+    if(a) Object.assign(a,{patientName,procedure,date,time,notes:document.getElementById('appt-note').value.trim()});
   } else {
-    db.appointments.push({id:uid(),patientName,date,time,notes:document.getElementById('appt-note').value.trim()});
+    db.appointments.push({id:uid(),patientName,procedure,date,time,notes:document.getElementById('appt-note').value.trim()});
   }
   saveDB('appointments');
   closeModal('ov-appt');
@@ -1002,9 +1041,13 @@ function openPatientFile(pid,mode){
   html+=`<div class="sec-lbl">İşlem Geçmişi (${procs.length})</div>`;
   if(procs.length){
     procs.forEach(proc=>{
-      html+=`<div class="hist-item">
-        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
+      html+=`<div class="hist-item" style="cursor:default">
+        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId||'—'}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
         <div class="hist-date">${formatDate(proc.date)}${proc.notes?' · '+proc.notes:''}</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn btn-sec btn-xs" onclick="editProcFromFile('${proc.id}','${pid}')">✏ Düzenle</button>
+          <button class="btn btn-err btn-xs" onclick="deleteProcFromFile('${proc.id}','${pid}')">✕ Sil</button>
+        </div>
       </div>`;
     });
   } else {
@@ -1026,11 +1069,15 @@ function openPatientFile(pid,mode){
 
 let currentPatientId=null;
 
+let currentEditProcPatientId=null;
+
 function openProcForPatient(pid){
   closeModal('ov-patient-file');
   const p=db.patients.find(x=>x.id===pid);
   if(!p) return;
-  // Open procedure record modal pre-filled with patient
+  currentEditProcPatientId=pid;
+  document.getElementById('pr-edit-id').value='';
+  document.getElementById('pr-del-btn').style.display='none';
   document.getElementById('pr-patient-input').value=p.name;
   document.getElementById('pr-type-id').value='';
   document.getElementById('pr-type-name').value='';
@@ -1286,9 +1333,12 @@ function renderRecentProcs(){
 }
 
 function openProcRecordModal(typeId,typeName){
+  currentEditProcPatientId=null;
+  document.getElementById('pr-edit-id').value='';
+  document.getElementById('pr-del-btn').style.display='none';
   document.getElementById('pr-type-id').value=typeId;
   document.getElementById('pr-type-name').value=typeName;
-  document.getElementById('pr-modal-title').textContent=typeName;
+  document.getElementById('pr-modal-title').textContent='İşlem Kaydı';
   document.getElementById('pr-patient-input').value='';
   document.getElementById('pr-date').value=dateStr(new Date());
   document.getElementById('pr-price').value='';
@@ -1301,28 +1351,122 @@ function fillProcPatientList(){
   document.getElementById('pr-patient-list').innerHTML=db.patients.map(p=>`<option value="${p.name}">`).join('');
 }
 
+// ========== İŞLEM SEÇİCİ ==========
+let procPickerTarget='proc';
+
+function openProcPicker(target){
+  procPickerTarget=target;
+  let html='';
+  db.cats.forEach(cat=>{
+    if(cat.subs&&cat.subs.length){
+      html+=`<div class="proc-pick-hdr">${cat.icon} ${cat.name}</div>`;
+      cat.subs.forEach(sub=>{
+        const enc=encodeURIComponent(sub);
+        html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
+          <span>${sub}</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>`;
+      });
+    } else {
+      html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}','${cat.name}')">
+        <span>${cat.icon} ${cat.name}</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </div>`;
+    }
+  });
+  document.getElementById('proc-picker-body').innerHTML=html;
+  openModal('ov-proc-picker');
+}
+
+function selectProcFromPicker(catId,name){
+  if(procPickerTarget==='appt'){
+    document.getElementById('appt-proc').value=name;
+  } else {
+    document.getElementById('pr-type-name').value=name;
+    document.getElementById('pr-type-id').value=catId;
+  }
+  closeModal('ov-proc-picker');
+}
+
+// ========== İŞLEM DÜZENLE / SİL (hasta dosyasından) ==========
+function editProcFromFile(procId,pid){
+  const proc=db.procedures.find(x=>x.id===procId);
+  if(!proc) return;
+  currentEditProcPatientId=pid;
+  closeModal('ov-patient-file');
+  document.getElementById('pr-edit-id').value=procId;
+  document.getElementById('pr-del-btn').style.display='flex';
+  document.getElementById('pr-type-id').value=proc.typeId||'';
+  document.getElementById('pr-type-name').value=proc.typeName||proc.typeId||'';
+  document.getElementById('pr-modal-title').textContent='İşlem Düzenle';
+  document.getElementById('pr-patient-input').value=proc.patientName||'';
+  document.getElementById('pr-date').value=proc.date;
+  document.getElementById('pr-price').value=proc.price||'';
+  document.getElementById('pr-notes').value=proc.notes||'';
+  fillProcPatientList();
+  openModal('ov-proc-record');
+}
+
+function deleteProcFromFile(procId,pid){
+  if(!confirm('Bu işlem kaydını silmek istediğinizden emin misiniz?')) return;
+  db.procedures=db.procedures.filter(x=>x.id!==procId);
+  saveDB('procedures');
+  renderRecentProcs();
+  showToast('İşlem silindi');
+  renderPatientFile(pid,'view');
+}
+
 function saveProcRecord(){
+  const editId=document.getElementById('pr-edit-id').value;
   const typeId=document.getElementById('pr-type-id').value;
-  const typeName=document.getElementById('pr-type-name').value;
+  const typeName=document.getElementById('pr-type-name').value.trim();
   const patientName=document.getElementById('pr-patient-input').value.trim();
   const date=document.getElementById('pr-date').value;
   const price=document.getElementById('pr-price').value;
+  const notes=document.getElementById('pr-notes').value.trim();
   if(!patientName||!date){showToast('Hasta adı ve tarih gerekli');return;}
   const patient=db.patients.find(p=>p.name.toLowerCase()===patientName.toLowerCase());
-  db.procedures.push({
-    id:uid(),
-    patientId:patient?patient.id:null,
-    patientName,
-    typeId,
-    typeName,
-    date,
-    price:price?parseFloat(price):0,
-    notes:document.getElementById('pr-notes').value.trim()
-  });
+
+  if(editId){
+    const proc=db.procedures.find(x=>x.id===editId);
+    if(proc) Object.assign(proc,{typeId,typeName,patientName,patientId:patient?patient.id:proc.patientId,date,price:price?parseFloat(price):0,notes});
+    saveDB('procedures');
+    closeModal('ov-proc-record');
+    renderRecentProcs();
+    showToast('İşlem güncellendi');
+    if(currentEditProcPatientId) renderPatientFile(currentEditProcPatientId,'view');
+    return;
+  }
+
+  db.procedures.push({id:uid(),patientId:patient?patient.id:null,patientName,typeId,typeName,date,price:price?parseFloat(price):0,notes});
   saveDB('procedures');
   closeModal('ov-proc-record');
   renderRecentProcs();
-  showToast('İşlem kaydedildi');
+
+  // Botoks ise 2 hafta sonraya kontrol randevusu ekle
+  const isBotoks=typeName&&typeName.toLowerCase().includes('botoks');
+  if(isBotoks){
+    const d=new Date(date+'T00:00:00');
+    d.setDate(d.getDate()+14);
+    db.appointments.push({id:uid(),patientName,procedure:'Botoks Kontrol',date:dateStr(d),time:'10:00',notes:'Botoks kontrol randevusu (otomatik)'});
+    saveDB('appointments');
+    showToast('İşlem kaydedildi — '+formatDate(dateStr(d))+" tarihine Botoks Kontrol randevusu eklendi ✓");
+  } else {
+    showToast('İşlem kaydedildi');
+  }
+  if(currentEditProcPatientId) renderPatientFile(currentEditProcPatientId,'view');
+}
+
+function deleteProcFromModal(){
+  const id=document.getElementById('pr-edit-id').value;
+  if(!id) return;
+  if(!confirm('Bu işlem kaydını silmek istediğinizden emin misiniz?')) return;
+  db.procedures=db.procedures.filter(x=>x.id!==id);
+  saveDB('procedures');
+  closeModal('ov-proc-record');
+  renderRecentProcs();
+  showToast('İşlem silindi');
+  if(currentEditProcPatientId) renderPatientFile(currentEditProcPatientId,'view');
 }
 
 function showProcPrice(procId){

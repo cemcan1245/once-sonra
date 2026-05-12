@@ -456,10 +456,11 @@ textarea.fc{resize:none;min-height:75px}
     <input type="hidden" id="pr-kind" value="new">
     <div class="fg"><label class="fl">İşlem</label>
       <div style="display:flex;gap:8px">
-        <input type="text" class="fc" id="pr-type-name" placeholder="İşlem seçin veya yazın..." style="flex:1">
+        <input type="text" class="fc" id="pr-type-name" placeholder="İşlem seçin veya yazın..." style="flex:1" onchange="updateProcRecordProducts()">
         <button type="button" class="btn btn-sec btn-sm" style="flex-shrink:0;padding:0 12px" onclick="openProcPicker('proc')">Seç</button>
       </div>
     </div>
+    <div id="pr-products-section"></div>
     <div class="fg"><label class="fl">Hasta</label>
       <input type="text" class="fc" id="pr-patient-input" placeholder="Hasta adı..." list="pr-patient-list">
       <datalist id="pr-patient-list"></datalist>
@@ -1046,9 +1047,11 @@ function openPatientFile(pid,mode){
     procs.forEach(proc=>{
       const isCtrl=proc.kind==='control';
       const kindBadge=`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;${isCtrl?'background:#e8f5e9;color:#2e7d32':'background:#e3f2fd;color:#1565c0'}">${isCtrl?'Kontrol':'Yeni İşlem'}</span>`;
+      const prodsLine=proc.products&&proc.products.length?proc.products.map(p=>`${p.name} ${p.qty} ${p.unit}`).join(' · '):'';
       html+=`<div class="hist-item" style="cursor:default">
         <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId||'—'}${kindBadge}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
         <div class="hist-date">${formatDate(proc.date)}${proc.notes?' · '+proc.notes:''}</div>
+        ${prodsLine?`<div style="font-size:12px;color:var(--tl);margin-top:3px">${prodsLine}</div>`:''}
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="btn btn-sec btn-xs" onclick="editProcFromFile('${proc.id}','${pid}')">✏ Düzenle</button>
           <button class="btn btn-err btn-xs" onclick="deleteProcFromFile('${proc.id}','${pid}')">✕ Sil</button>
@@ -1091,6 +1094,9 @@ function openProcForPatient(pid){
   document.getElementById('pr-date').value=dateStr(new Date());
   document.getElementById('pr-price').value='';
   document.getElementById('pr-notes').value='';
+  procProdUnits={};
+  const ps=document.getElementById('pr-products-section');
+  if(ps) ps.innerHTML='';
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1111,6 +1117,9 @@ function openControlForPatient(pid){
   document.getElementById('pr-date').value=dateStr(new Date());
   document.getElementById('pr-price').value='';
   document.getElementById('pr-notes').value='';
+  procProdUnits={};
+  updateProcRecordProducts();
+  if(lastProc&&lastProc.products) fillProcSavedProducts(lastProc.products);
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1364,12 +1373,15 @@ function openProcRecordModal(typeId,typeName){
   document.getElementById('pr-del-btn').style.display='none';
   document.getElementById('pr-type-id').value=typeId;
   document.getElementById('pr-type-name').value=typeName;
+  document.getElementById('pr-kind').value='new';
   document.getElementById('pr-modal-title').textContent='İşlem Kaydı';
   document.getElementById('pr-patient-input').value='';
   document.getElementById('pr-date').value=dateStr(new Date());
   document.getElementById('pr-price').value='';
   document.getElementById('pr-notes').value='';
+  procProdUnits={};
   fillProcPatientList();
+  updateProcRecordProducts();
   openModal('ov-proc-record');
 }
 
@@ -1379,6 +1391,65 @@ function fillProcPatientList(){
 
 // ========== İŞLEM SEÇİCİ ==========
 let procPickerTarget='proc';
+let procProdUnits={};
+
+function updateProcRecordProducts(){
+  const typeId=document.getElementById('pr-type-id').value;
+  const typeName=document.getElementById('pr-type-name').value.trim();
+  const el=document.getElementById('pr-products-section');
+  if(!el) return;
+  if(!typeId&&!typeName){el.innerHTML='';return;}
+  let products=[];
+  if(typeId){
+    const cat=db.cats.find(c=>c.id===typeId);
+    if(cat){
+      if(isCatDirect(cat)){
+        const selProd=db.products.find(p=>p.cat===typeId&&p.name===typeName);
+        products=selProd?[selProd]:db.products.filter(p=>p.cat===typeId);
+      } else {
+        products=db.products.filter(p=>p.cat===typeId);
+      }
+    }
+  }
+  if(!products.length&&typeName){
+    const prod=db.products.find(p=>p.name.toLowerCase()===typeName.toLowerCase());
+    if(prod) products=[prod];
+  }
+  if(!products.length){el.innerHTML='';return;}
+  let html='<div style="background:#f0f7fa;border-radius:8px;margin-bottom:4px;overflow:hidden">';
+  html+='<div style="padding:8px 14px 4px;font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px">Kullanılan Ürünler</div>';
+  products.forEach(prod=>{
+    const u=(prod.unit==='cc'?'ml':prod.unit)||'adet';
+    procProdUnits[prod.id]=u;
+    html+=`<div class="pr-row">
+      <div class="pr-pname">${prod.name}</div>
+      <input type="number" class="pr-qty" id="prp-${prod.id}" placeholder="0" min="0" step="0.1">
+      <div class="utg">
+        <button class="utg-btn${u==='adet'?' sel':''}" id="pru-${prod.id}-adet" onclick="setProcProdUnit('${prod.id}','adet')">adet</button>
+        <button class="utg-btn${u==='ml'?' sel':''}" id="pru-${prod.id}-ml" onclick="setProcProdUnit('${prod.id}','ml')">ml</button>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function setProcProdUnit(prodId,unit){
+  procProdUnits[prodId]=unit;
+  ['adet','ml'].forEach(u=>{
+    const btn=document.getElementById('pru-'+prodId+'-'+u);
+    if(btn) btn.classList.toggle('sel',u===unit);
+  });
+}
+
+function fillProcSavedProducts(prods){
+  if(!prods||!prods.length) return;
+  prods.forEach(pp=>{
+    const inp=document.getElementById('prp-'+pp.id);
+    if(inp) inp.value=pp.qty||'';
+    if(pp.unit) setProcProdUnit(pp.id,pp.unit);
+  });
+}
 
 function openProcPicker(target){
   procPickerTarget=target;
@@ -1443,6 +1514,10 @@ function selectProcFromPicker(catId,name){
     document.getElementById('pr-type-id').value=catId;
   }
   closeModal('ov-proc-picker');
+  if(procPickerTarget==='proc'){
+    procProdUnits={};
+    updateProcRecordProducts();
+  }
 }
 
 // ========== İŞLEM DÜZENLE / SİL (hasta dosyasından) ==========
@@ -1461,6 +1536,9 @@ function editProcFromFile(procId,pid){
   document.getElementById('pr-price').value=proc.price||'';
   document.getElementById('pr-notes').value=proc.notes||'';
   document.getElementById('pr-kind').value=proc.kind||'new';
+  procProdUnits={};
+  updateProcRecordProducts();
+  if(proc.products) fillProcSavedProducts(proc.products);
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1485,10 +1563,20 @@ function saveProcRecord(){
   const kind=document.getElementById('pr-kind').value||'new';
   if(!patientName||!date){showToast('Hasta adı ve tarih gerekli');return;}
   const patient=db.patients.find(p=>p.name.toLowerCase()===patientName.toLowerCase());
+  // Collect used products
+  const usedProds=[];
+  document.querySelectorAll('[id^="prp-"]').forEach(inp=>{
+    const qty=parseFloat(inp.value);
+    if(qty>0){
+      const pid2=inp.id.replace('prp-','');
+      const prod=db.products.find(p=>p.id===pid2);
+      if(prod) usedProds.push({id:pid2,name:prod.name,qty,unit:procProdUnits[pid2]||prod.unit||'adet'});
+    }
+  });
 
   if(editId){
     const proc=db.procedures.find(x=>x.id===editId);
-    if(proc) Object.assign(proc,{typeId,typeName,patientName,patientId:patient?patient.id:proc.patientId,date,price:price?parseFloat(price):0,notes,kind});
+    if(proc) Object.assign(proc,{typeId,typeName,patientName,patientId:patient?patient.id:proc.patientId,date,price:price?parseFloat(price):0,notes,kind,products:usedProds});
     saveDB('procedures');
     closeModal('ov-proc-record');
     renderRecentProcs();
@@ -1497,7 +1585,7 @@ function saveProcRecord(){
     return;
   }
 
-  db.procedures.push({id:uid(),patientId:patient?patient.id:null,patientName,typeId,typeName,date,price:price?parseFloat(price):0,notes,kind});
+  db.procedures.push({id:uid(),patientId:patient?patient.id:null,patientName,typeId,typeName,date,price:price?parseFloat(price):0,notes,kind,products:usedProds});
   saveDB('procedures');
   closeModal('ov-proc-record');
   renderRecentProcs();

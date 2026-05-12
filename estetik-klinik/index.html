@@ -453,6 +453,7 @@ textarea.fc{resize:none;min-height:75px}
   <div class="mbody">
     <input type="hidden" id="pr-type-id">
     <input type="hidden" id="pr-edit-id">
+    <input type="hidden" id="pr-kind" value="new">
     <div class="fg"><label class="fl">İşlem</label>
       <div style="display:flex;gap:8px">
         <input type="text" class="fc" id="pr-type-name" placeholder="İşlem seçin veya yazın..." style="flex:1">
@@ -998,8 +999,8 @@ function showPatientMenu(e,pid){
   menu.id='patient-popup';
   menu.innerHTML=`
     <div class="popup-item" onclick="openPatientFile('${pid}','preview')">👁 Önizleme</div>
-    <div class="popup-item" onclick="openPatientFile('${pid}','new')">➕ Yeni Kayıt</div>
-    <div class="popup-item" onclick="openPatientFile('${pid}','control')">🔄 Kontrol</div>
+    <div class="popup-item" onclick="openPatientFile('${pid}','new')">➕ Yeni İşlem</div>
+    <div class="popup-item" onclick="openControlForPatient('${pid}')">🔄 Kontrol</div>
   `;
   const r=e.currentTarget.getBoundingClientRect();
   const top=Math.min(r.top,window.innerHeight-160);
@@ -1043,8 +1044,10 @@ function openPatientFile(pid,mode){
   html+=`<div class="sec-lbl">İşlem Geçmişi (${procs.length})</div>`;
   if(procs.length){
     procs.forEach(proc=>{
+      const isCtrl=proc.kind==='control';
+      const kindBadge=`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;${isCtrl?'background:#e8f5e9;color:#2e7d32':'background:#e3f2fd;color:#1565c0'}">${isCtrl?'Kontrol':'Yeni İşlem'}</span>`;
       html+=`<div class="hist-item" style="cursor:default">
-        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId||'—'}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
+        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId||'—'}${kindBadge}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
         <div class="hist-date">${formatDate(proc.date)}${proc.notes?' · '+proc.notes:''}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="btn btn-sec btn-xs" onclick="editProcFromFile('${proc.id}','${pid}')">✏ Düzenle</button>
@@ -1060,7 +1063,7 @@ function openPatientFile(pid,mode){
 
   // Footer buttons based on mode
   let footerHtml='';
-  if(mode==='new'||mode==='control'){
+  if(mode==='new'){
     footerHtml=`<button class="btn btn-p btn-full" onclick="openProcForPatient('${pid}')">+ Yeni İşlem Ekle</button>`;
   } else {
     footerHtml=`<button class="btn btn-p btn-full" onclick="closeModal('ov-patient-file')">Kapat</button>`;
@@ -1083,7 +1086,28 @@ function openProcForPatient(pid){
   document.getElementById('pr-patient-input').value=p.name;
   document.getElementById('pr-type-id').value='';
   document.getElementById('pr-type-name').value='';
+  document.getElementById('pr-kind').value='new';
   document.getElementById('pr-modal-title').textContent='Yeni İşlem – '+p.name;
+  document.getElementById('pr-date').value=dateStr(new Date());
+  document.getElementById('pr-price').value='';
+  document.getElementById('pr-notes').value='';
+  fillProcPatientList();
+  openModal('ov-proc-record');
+}
+
+function openControlForPatient(pid){
+  closeAllPopups();
+  const p=db.patients.find(x=>x.id===pid);
+  if(!p) return;
+  const lastProc=db.procedures.filter(x=>x.patientId===pid).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  currentEditProcPatientId=pid;
+  document.getElementById('pr-edit-id').value='';
+  document.getElementById('pr-del-btn').style.display='none';
+  document.getElementById('pr-patient-input').value=p.name;
+  document.getElementById('pr-type-id').value=lastProc?lastProc.typeId||'':'';
+  document.getElementById('pr-type-name').value=lastProc?lastProc.typeName||lastProc.typeId||'':'';
+  document.getElementById('pr-kind').value='control';
+  document.getElementById('pr-modal-title').textContent='Kontrol – '+p.name;
   document.getElementById('pr-date').value=dateStr(new Date());
   document.getElementById('pr-price').value='';
   document.getElementById('pr-notes').value='';
@@ -1360,22 +1384,38 @@ function openProcPicker(target){
   procPickerTarget=target;
   let html='';
   db.cats.forEach((cat,i)=>{
-    const hasSubs=cat.subs&&cat.subs.length>0;
-    if(hasSubs){
+    const isDirect=isCatDirect(cat);
+    const hasSubs=!isDirect&&cat.subs&&cat.subs.length>0;
+    const prods=isDirect?db.products.filter(p=>p.cat===cat.id):[];
+    const hasProds=prods.length>0;
+
+    if(hasSubs||hasProds){
+      // Expandable category
       html+=`<div class="proc-pick-cat" onclick="togglePickerCat(${i})">
         <span>${cat.icon} ${cat.name}</span>
         <svg class="ppc-arrow" id="ppc-arrow-${i}" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       <div id="ppc-subs-${i}" style="display:none">`;
-      cat.subs.forEach(sub=>{
-        const enc=encodeURIComponent(sub);
-        html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
-          <span>${sub}</span>
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-        </div>`;
-      });
+      if(hasSubs){
+        cat.subs.forEach(sub=>{
+          const enc=encodeURIComponent(sub);
+          html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
+            <span>${sub}</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>`;
+        });
+      } else {
+        prods.forEach(prod=>{
+          const encName=encodeURIComponent(prod.name);
+          html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${encName}'))">
+            <span>${prod.name}</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>`;
+        });
+      }
       html+='</div>';
     } else {
+      // No sub-items: direct select
       html+=`<div class="proc-pick-cat" onclick="selectProcFromPicker('${cat.id}','${cat.name}')">
         <span>${cat.icon} ${cat.name}</span>
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--tl)" stroke-width="2" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
@@ -1420,6 +1460,7 @@ function editProcFromFile(procId,pid){
   document.getElementById('pr-date').value=proc.date;
   document.getElementById('pr-price').value=proc.price||'';
   document.getElementById('pr-notes').value=proc.notes||'';
+  document.getElementById('pr-kind').value=proc.kind||'new';
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1441,12 +1482,13 @@ function saveProcRecord(){
   const date=document.getElementById('pr-date').value;
   const price=document.getElementById('pr-price').value;
   const notes=document.getElementById('pr-notes').value.trim();
+  const kind=document.getElementById('pr-kind').value||'new';
   if(!patientName||!date){showToast('Hasta adı ve tarih gerekli');return;}
   const patient=db.patients.find(p=>p.name.toLowerCase()===patientName.toLowerCase());
 
   if(editId){
     const proc=db.procedures.find(x=>x.id===editId);
-    if(proc) Object.assign(proc,{typeId,typeName,patientName,patientId:patient?patient.id:proc.patientId,date,price:price?parseFloat(price):0,notes});
+    if(proc) Object.assign(proc,{typeId,typeName,patientName,patientId:patient?patient.id:proc.patientId,date,price:price?parseFloat(price):0,notes,kind});
     saveDB('procedures');
     closeModal('ov-proc-record');
     renderRecentProcs();
@@ -1455,7 +1497,7 @@ function saveProcRecord(){
     return;
   }
 
-  db.procedures.push({id:uid(),patientId:patient?patient.id:null,patientName,typeId,typeName,date,price:price?parseFloat(price):0,notes});
+  db.procedures.push({id:uid(),patientId:patient?patient.id:null,patientName,typeId,typeName,date,price:price?parseFloat(price):0,notes,kind});
   saveDB('procedures');
   closeModal('ov-proc-record');
   renderRecentProcs();

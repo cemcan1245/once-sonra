@@ -2435,13 +2435,29 @@ function renderMaliyetYedek(){
         </div>
       </div>
       <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
-        <div style="font-size:14px;font-weight:700;margin-bottom:6px">⬇ Dışa Aktar</div>
-        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Tüm verilerinizi JSON dosyası olarak indirin. Düzenli yedek almanız önerilir.</div>
-        <button class="btn btn-p btn-full" onclick="exportData()">Verileri İndir (JSON)</button>
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">👥 Hasta Yedeği</div>
+        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Hasta kayıtlarını ve işlem geçmişini ayrı olarak yedekleyin veya geri yükleyin.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-p" style="flex:1" onclick="exportPatients()">⬇ İndir</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="importPatients()">⬆ Yükle</button>
+        </div>
       </div>
       <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
-        <div style="font-size:14px;font-weight:700;margin-bottom:6px">⬆ İçe Aktar</div>
-        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Önceki yedek dosyasını yükleyin. <b>Mevcut veriler tamamen silinir.</b></div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">📅 Ajanda Yedeği</div>
+        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Randevu kayıtlarını ayrı olarak yedekleyin veya geri yükleyin.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-p" style="flex:1" onclick="exportAppointments()">⬇ İndir</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="importAppointments()">⬆ Yükle</button>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">⬇ Tam Yedek</div>
+        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Tüm verilerinizi JSON dosyası olarak indirin. Düzenli yedek almanız önerilir.</div>
+        <button class="btn btn-p btn-full" onclick="exportData()">Tüm Verileri İndir (JSON)</button>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">⬆ Tam Geri Yükleme</div>
+        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Önceki tam yedek dosyasını yükleyin. <b>Mevcut veriler tamamen silinir.</b></div>
         <button class="btn btn-ghost btn-full" onclick="importData()">Yedekten Geri Yükle</button>
       </div>
       <div style="background:#fff8e1;border-radius:12px;padding:13px;border:1px solid #ffe082;font-size:12.5px;color:#7a5c00;line-height:1.5">
@@ -2496,6 +2512,86 @@ function importData(){
         showToast('✓ Veriler başarıyla yüklendi');
         renderMaliyetYedek();
       }catch(err){ showToast('Hata: Geçersiz yedek dosyası'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportPatients(){
+  const data={
+    type:'hasta-yedegi',
+    version:1,
+    exportDate:new Date().toISOString(),
+    patients:db.patients,
+    procedures:db.procedures
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date().toLocaleDateString('tr-TR').replace(/\./g,'-');
+  a.href=url; a.download='hastalar-yedek-'+d+'.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Hasta yedeği indirildi');
+}
+
+function importPatients(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(!Array.isArray(data.patients)) throw new Error('invalid');
+        const msg=`${data.patients.length} hasta ve ${(data.procedures||[]).length} işlem kaydı yüklenecek.\nMevcut hasta ve işlem verileri silinecek. Emin misiniz?`;
+        if(!confirm(msg)) return;
+        db.patients=data.patients;
+        db.procedures=data.procedures||[];
+        saveDB('patients'); saveDB('procedures');
+        showToast('✓ Hasta verileri yüklendi');
+        renderMaliyetYedek();
+      }catch(err){ showToast('Hata: Geçersiz hasta yedeği'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportAppointments(){
+  const data={
+    type:'ajanda-yedegi',
+    version:1,
+    exportDate:new Date().toISOString(),
+    appointments:db.appointments
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date().toLocaleDateString('tr-TR').replace(/\./g,'-');
+  a.href=url; a.download='ajanda-yedek-'+d+'.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Ajanda yedeği indirildi');
+}
+
+function importAppointments(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(!Array.isArray(data.appointments)) throw new Error('invalid');
+        const msg=`${data.appointments.length} randevu yüklenecek.\nMevcut randevu verileri silinecek. Emin misiniz?`;
+        if(!confirm(msg)) return;
+        db.appointments=data.appointments;
+        saveDB('appointments');
+        showToast('✓ Ajanda verileri yüklendi');
+        renderMaliyetYedek();
+      }catch(err){ showToast('Hata: Geçersiz ajanda yedeği'); }
     };
     reader.readAsText(file);
   };

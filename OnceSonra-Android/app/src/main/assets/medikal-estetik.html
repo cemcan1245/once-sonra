@@ -401,6 +401,14 @@ textarea.fc{resize:none;min-height:75px}
       <div class="tg-grp"><button class="tg-btn no" onclick="toggleField(this,'np-aesthetic-detail','Yok')">Yok</button><button class="tg-btn" onclick="toggleField(this,'np-aesthetic-detail','Var')">Var</button></div>
       <textarea class="fc" id="np-aesthetic-detail" placeholder="İşlem detayları..." rows="2" style="display:none;margin-top:8px"></textarea>
     </div>
+    <div class="fg" style="text-align:center;padding-bottom:4px">
+      <label class="fl" style="text-align:left">Profil Fotoğrafı</label>
+      <input type="file" id="np-photo-input" accept="image/*" capture="user" style="display:none" onchange="handleNpPhoto(this)">
+      <div id="np-photo-preview" style="display:none;justify-content:center;margin-bottom:10px">
+        <img id="np-photo-img" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--p)">
+      </div>
+      <button type="button" class="btn btn-sec" id="np-photo-btn" style="width:100%" onclick="document.getElementById('np-photo-input').click()">📷 Fotoğraf Çek / Ekle</button>
+    </div>
     <div style="height:10px"></div>
   </div>
   <div class="mfooter">
@@ -922,8 +930,11 @@ function renderPatients(list){
   document.getElementById('patient-list').innerHTML=pts.map(p=>{
     const initials=p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const lastProc=getLastProcDate(p.id);
+    const avatar=p.photo
+      ?`<img src="${p.photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      :`<div class="av${p.gender==='K'?' f':''}">${initials}</div>`;
     return `<div class="pi" onclick="showPatientMenu(event,'${p.id}')">
-      <div class="av${p.gender==='K'?' f':''}">${initials}</div>
+      ${avatar}
       <div style="flex:1">
         <div class="pname">${p.name}</div>
         <div class="psub">${lastProc?'Son işlem: '+formatDate(lastProc):'Kayıt: '+formatDate(p.createdAt)}</div>
@@ -982,6 +993,7 @@ function showPatientMenu(e,pid){
     <div class="popup-item" onclick="openPatientFile('${pid}','preview')">👁 Önizleme</div>
     <div class="popup-item" onclick="openPatientFile('${pid}','new')">➕ Yeni İşlem</div>
     <div class="popup-item" onclick="openControlForPatient('${pid}')">🔄 Kontrol</div>
+    <div class="popup-item" style="color:#e74c3c" onclick="deletePatient('${pid}')">🗑 Sil</div>
   `;
   const r=e.currentTarget.getBoundingClientRect();
   const top=Math.min(r.top,window.innerHeight-160);
@@ -995,7 +1007,11 @@ function openPatientFile(pid,mode){
   const p=db.patients.find(x=>x.id===pid);
   if(!p) return;
   currentPatientId=pid;
-  document.getElementById('pfile-title').textContent=p.name;
+  if(p.photo){
+    document.getElementById('pfile-title').innerHTML=`<span style="display:flex;align-items:center;gap:8px"><img src="${p.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover"><span>${p.name}</span></span>`;
+  } else {
+    document.getElementById('pfile-title').textContent=p.name;
+  }
 
   let html='';
   // Anamnez
@@ -1029,7 +1045,7 @@ function openPatientFile(pid,mode){
       const kindBadge=`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;${isCtrl?'background:#e8f5e9;color:#2e7d32':'background:#e3f2fd;color:#1565c0'}">${isCtrl?'Kontrol':'Yeni İşlem'}</span>`;
       const prodsLine=proc.products&&proc.products.length?proc.products.map(p=>`${p.name} ${p.qty} ${p.unit}`).join(' · '):'';
       html+=`<div class="hist-item" style="cursor:default">
-        <div class="hist-top"><div class="hist-proc">${proc.typeName||proc.typeId||'—'}${kindBadge}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
+        <div class="hist-top"><div class="hist-proc">${getProcDisplayLabel(proc)}${kindBadge}</div><div class="hist-price">${proc.price?'₺'+Number(proc.price).toLocaleString('tr-TR'):'—'}</div></div>
         <div class="hist-date">${formatDate(proc.date)}${proc.notes?' · '+proc.notes:''}</div>
         ${prodsLine?`<div style="font-size:12px;color:var(--tl);margin-top:3px">${prodsLine}</div>`:''}
         <div style="display:flex;gap:6px;margin-top:8px">
@@ -1135,6 +1151,10 @@ function openNewPatientModal(){
   document.getElementById('np-gen-e').className='tg-btn';
   document.getElementById('np-pregnancy-group').style.display='block';
   document.getElementById('np-breastfeed-group').style.display='block';
+  document.getElementById('np-photo-preview').style.display='none';
+  document.getElementById('np-photo-img').src='';
+  document.getElementById('np-photo-btn').textContent='📷 Fotoğraf Çek / Ekle';
+  document.getElementById('np-photo-input').value='';
   openModal('ov-new-patient');
 }
 
@@ -1190,6 +1210,17 @@ function openEditPatientModal(p){
   else{document.getElementById('np-preg-no').className='tg-btn no';document.getElementById('np-preg-yes').className='tg-btn';}
   if(p.breastfeed==='Var'){document.getElementById('np-bf-yes').className='tg-btn yes';document.getElementById('np-bf-no').className='tg-btn';}
   else{document.getElementById('np-bf-no').className='tg-btn no';document.getElementById('np-bf-yes').className='tg-btn';}
+  // Photo
+  if(p.photo){
+    document.getElementById('np-photo-img').src=p.photo;
+    document.getElementById('np-photo-preview').style.display='flex';
+    document.getElementById('np-photo-btn').textContent='📷 Fotoğrafı Değiştir';
+  } else {
+    document.getElementById('np-photo-preview').style.display='none';
+    document.getElementById('np-photo-img').src='';
+    document.getElementById('np-photo-btn').textContent='📷 Fotoğraf Çek / Ekle';
+  }
+  document.getElementById('np-photo-input').value='';
   openModal('ov-new-patient');
 }
 
@@ -1257,6 +1288,8 @@ function savePatient(){
     pregnancy:npGender==='K'?getSimpleToggle('np-preg-yes','np-preg-no'):'—',
     breastfeed:npGender==='K'?getSimpleToggle('np-bf-yes','np-bf-no'):'—'
   };
+  const photoSrc=document.getElementById('np-photo-img').src;
+  pData.photo=photoSrc&&photoSrc.startsWith('data:')?photoSrc:(editId?(db.patients.find(x=>x.id===editId)||{}).photo||null:null);
   if(editId){
     const idx=db.patients.findIndex(x=>x.id===editId);
     if(idx>=0) Object.assign(db.patients[idx],pData);
@@ -1269,6 +1302,55 @@ function savePatient(){
   closeModal('ov-new-patient');
   renderPatients();
   showToast(editId?'Hasta güncellendi':'Hasta eklendi');
+}
+
+function handleNpPhoto(input){
+  const file=input.files[0];
+  if(!file) return;
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    const size=300; canvas.width=size; canvas.height=size;
+    const ctx=canvas.getContext('2d');
+    const aspect=img.width/img.height;
+    let sx=0,sy=0,sw=img.width,sh=img.height;
+    if(aspect>1){sx=(img.width-img.height)/2;sw=sh;}
+    else if(aspect<1){sy=(img.height-img.width)/2;sh=sw;}
+    ctx.drawImage(img,sx,sy,sw,sh,0,0,size,size);
+    const b64=canvas.toDataURL('image/jpeg',0.75);
+    document.getElementById('np-photo-img').src=b64;
+    document.getElementById('np-photo-preview').style.display='flex';
+    document.getElementById('np-photo-btn').textContent='📷 Fotoğrafı Değiştir';
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
+}
+
+function deletePatient(pid){
+  closeAllPopups();
+  const p=db.patients.find(x=>x.id===pid);
+  if(!p) return;
+  if(!confirm('"'+p.name+'" hastasını silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.')) return;
+  db.patients=db.patients.filter(x=>x.id!==pid);
+  db.procedures=db.procedures.filter(x=>x.patientId!==pid);
+  saveDB('patients');
+  saveDB('procedures');
+  renderPatients();
+  renderRecentProcs();
+  showToast('Hasta silindi');
+}
+
+function getProcDisplayLabel(proc){
+  const cat=db.cats.find(c=>c.id===proc.typeId);
+  const catName=cat?cat.name:'';
+  const isDirect=cat?isCatDirect(cat):false;
+  const prodPart=proc.products&&proc.products.length
+    ?proc.products.map(p=>p.name).join(', ')
+    :(isDirect&&proc.typeName?proc.typeName:'');
+  const subPart=(!isDirect&&proc.typeName&&proc.typeName!==catName)?proc.typeName:'';
+  const parts=[prodPart,subPart,catName].filter(Boolean);
+  return parts.length?parts.join(' '):(proc.typeName||proc.typeId||'—');
 }
 
 // ==================== İŞLEMLER ====================
@@ -1338,7 +1420,7 @@ function renderRecentProcs(){
   procs.forEach(proc=>{
     html+=`<div class="rp-item">
       <div class="rp-date">${formatDate(proc.date)}</div>
-      <div style="flex:1"><div class="rp-proc">${proc.typeName||proc.typeId}</div>
+      <div style="flex:1"><div class="rp-proc">${getProcDisplayLabel(proc)}</div>
       <div class="rp-name">${proc.patientName||'—'}</div></div>
     </div>`;
   });
@@ -1402,15 +1484,23 @@ function saveProcRecord(){
   closeModal('ov-proc-record');
   renderRecentProcs();
 
-  const isBotoks=typeName&&typeName.toLowerCase().includes('botoks');
-  if(isBotoks){
+  const catOfProc=db.cats.find(c=>c.id===typeId);
+  const catNameLower=catOfProc?catOfProc.name.toLowerCase():'';
+  const isBotoks=(typeName&&typeName.toLowerCase().includes('botoks'))||catNameLower.includes('botoks');
+  if(isBotoks&&kind!=='control'){
     const d=new Date(date+'T00:00:00');
     d.setDate(d.getDate()+14);
     db.appointments.push({id:uid(),patientName,procedure:'Botoks Kontrol',date:dateStr(d),time:'10:00',notes:'Botoks kontrol randevusu (otomatik)'});
     saveDB('appointments');
     showToast('İşlem kaydedildi — '+formatDate(dateStr(d))+' tarihine Botoks Kontrol randevusu eklendi ✓');
+  } else if(isBotoks&&kind==='control'){
+    const d=new Date(date+'T00:00:00');
+    d.setDate(d.getDate()+14);
+    db.appointments.push({id:uid(),patientName,procedure:'Botoks Kontrol Foto',date:dateStr(d),time:'10:00',notes:'Botoks kontrol fotoğraf randevusu (otomatik)'});
+    saveDB('appointments');
+    showToast('Kontrol kaydedildi — '+formatDate(dateStr(d))+' tarihine Botoks Kontrol Foto randevusu eklendi ✓');
   } else {
-    showToast('İşlem kaydedildi');
+    showToast(kind==='control'?'Kontrol kaydedildi':'İşlem kaydedildi');
   }
   if(currentEditProcPatientId) renderPatientFile(currentEditProcPatientId,'view');
 }

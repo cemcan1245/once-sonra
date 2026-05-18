@@ -569,15 +569,20 @@ const DEFAULT_PRODUCTS = [
   {id:'newest-one',name:'Newest One',cat:'mezoterapi-yuz',unit:'adet',price:0},
   {id:'elastica',name:'Elastica Hydroboost',cat:'mezoterapi-yuz',unit:'adet',price:0},
   {id:'morphiya-yuz',name:'Morphiya Yüz',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'crystal',name:'Crystal',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'prp-yuz',name:'PRP',cat:'mezoterapi-yuz',unit:'adet',price:0},
+  {id:'prf-yuz',name:'PRF',cat:'mezoterapi-yuz',unit:'adet',price:0},
   {id:'morphiya-scalp',name:'Morphiya Scalp',cat:'mezoterapi-sac',unit:'adet',price:0},
   {id:'sonreir',name:'Sonreir Hair',cat:'mezoterapi-sac',unit:'adet',price:0},
   {id:'plinest-hair',name:'Plinest Hair',cat:'mezoterapi-sac',unit:'adet',price:0},
   {id:'minoksidil',name:'Minoksidil',cat:'mezoterapi-sac',unit:'cc',price:0},
   {id:'dutasteride',name:'Dutasteride',cat:'mezoterapi-sac',unit:'cc',price:0},
   {id:'ms-eksozom',name:'MS Pharma Eksozom',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'prp-sac',name:'PRP',cat:'mezoterapi-sac',unit:'adet',price:0},
+  {id:'prf-sac',name:'PRF',cat:'mezoterapi-sac',unit:'adet',price:0},
   {id:'sardenya',name:'Sardenya Deep',cat:'dolgu',unit:'cc',price:0},
   {id:'yvoire',name:'Yvoire Volume',cat:'dolgu',unit:'cc',price:0},
-  {id:'caha',name:'CaHa',cat:'sivi-yuz',unit:'cc',price:0},
+  {id:'caha',name:'Monaco Touch',cat:'sivi-yuz',unit:'cc',price:0},
   {id:'revoderm',name:'Revoderm PLLA',cat:'sivi-yuz',unit:'cc',price:0},
   {id:'gouri',name:'Gouri PCL',cat:'sivi-yuz',unit:'cc',price:0},
   {id:'clh-lipaz',name:'CLH Lipaz',cat:'lipoliz',unit:'cc',price:0},
@@ -588,7 +593,8 @@ const DEFAULT_PRODUCTS = [
   {id:'myers',name:'Myers Cocktail',cat:'iv',unit:'adet',price:0},
   {id:'infinity',name:'İnfinity Cocktail',cat:'iv',unit:'adet',price:0},
   {id:'glutatyon',name:'Glutatyon',cat:'iv',unit:'adet',price:0},
-  {id:'alfa-lipoik',name:'Alfa Lipoik Asit',cat:'iv',unit:'adet',price:0}
+  {id:'alfa-lipoik',name:'Alfa Lipoik Asit',cat:'iv',unit:'adet',price:0},
+  {id:'collagen-booster',name:'Collagen Booster',cat:'iv',unit:'adet',price:0}
 ];
 
 const DEFAULT_CONSUMABLES = [
@@ -621,6 +627,15 @@ const PROD_CATS = [
   {id:'lipoliz',name:'Lipoliz',icon:'🔥'},
   {id:'iv',name:'İV Tedaviler',icon:'🩸'}
 ];
+
+// Sub → product-category mapping for proc picker & product display
+const SUB_PROD_MAP = {
+  'mezoterapi': {
+    'Yüz':  ['mezoterapi-yuz'],
+    'Saç':  ['mezoterapi-sac'],
+    'Skar': ['mezoterapi-yuz','mezoterapi-sac']
+  }
+};
 
 // ==================== DATABASE ====================
 let db = {
@@ -1529,6 +1544,21 @@ function deleteProcFromModal(){
 let procPickerTarget='proc';
 let procProdUnits={};
 
+function getProductsForProc(catId,subName){
+  let ids;
+  if(SUB_PROD_MAP[catId]){
+    ids=(subName&&SUB_PROD_MAP[catId][subName])?SUB_PROD_MAP[catId][subName]:[...new Set(Object.values(SUB_PROD_MAP[catId]).flat())];
+  } else {
+    ids=[catId];
+  }
+  let prods=db.products.filter(p=>ids.includes(p.cat));
+  if(ids.length>1){
+    const seen=new Set();
+    prods=prods.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;});
+  }
+  return prods;
+}
+
 function updateProcRecordProducts(){
   const typeId=document.getElementById('pr-type-id').value;
   const typeName=document.getElementById('pr-type-name').value.trim();
@@ -1541,9 +1571,9 @@ function updateProcRecordProducts(){
     if(cat){
       if(isCatDirect(cat)){
         const selProd=db.products.find(p=>p.cat===typeId&&p.name===typeName);
-        products=selProd?[selProd]:db.products.filter(p=>p.cat===typeId);
+        products=selProd?[selProd]:getProductsForProc(typeId,'');
       } else {
-        products=db.products.filter(p=>p.cat===typeId);
+        products=getProductsForProc(typeId,typeName);
       }
     }
   }
@@ -1605,7 +1635,7 @@ function openProcPicker(target){
       if(hasSubs){
         cat.subs.forEach((sub,si)=>{
           const enc=encodeURIComponent(sub);
-          const subProds=db.products.filter(p=>p.cat===cat.id);
+          const subProds=getProductsForProc(cat.id,sub);
           const subKey=`${i}-${si}`;
           if(subProds.length>0){
             html+=`<div class="proc-pick-item" onclick="togglePickerSub('${subKey}')">
@@ -2630,8 +2660,24 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+// ==================== MIGRATION ====================
+function migrateDB(){
+  let changed=false;
+  db.products.forEach(p=>{if((p.id==='caha'||p.name==='CaHa')&&p.name!=='Monaco Touch'){p.name='Monaco Touch';changed=true;}});
+  [
+    {id:'crystal',name:'Crystal',cat:'mezoterapi-yuz',unit:'adet',price:0},
+    {id:'prp-yuz',name:'PRP',cat:'mezoterapi-yuz',unit:'adet',price:0},
+    {id:'prf-yuz',name:'PRF',cat:'mezoterapi-yuz',unit:'adet',price:0},
+    {id:'prp-sac',name:'PRP',cat:'mezoterapi-sac',unit:'adet',price:0},
+    {id:'prf-sac',name:'PRF',cat:'mezoterapi-sac',unit:'adet',price:0},
+    {id:'collagen-booster',name:'Collagen Booster',cat:'iv',unit:'adet',price:0}
+  ].forEach(p=>{if(!db.products.find(x=>x.id===p.id)){db.products.push({...p});changed=true;}});
+  if(changed) saveDB('products');
+}
+
 // ==================== INIT ====================
 loadDB();
+migrateDB();
 renderCalendar();
 </script>
 </body>

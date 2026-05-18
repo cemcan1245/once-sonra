@@ -1102,7 +1102,12 @@ function openPatientFile(pid,mode){
   if(mode==='new'){
     footerHtml=`<button class="btn btn-p btn-full" onclick="openProcForPatient('${pid}')">+ Yeni İşlem Ekle</button>`;
   } else {
-    footerHtml=`<button class="btn btn-p btn-full" onclick="closeModal('ov-patient-file')">Kapat</button>`;
+    footerHtml=`
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn btn-p" style="flex:1" onclick="closeModal('ov-patient-file');openProcForPatient('${pid}')">➕ Yeni İşlem</button>
+        <button class="btn btn-sec" style="flex:1" onclick="closeModal('ov-patient-file');openControlForPatient('${pid}')">🔄 Kontrol</button>
+      </div>
+      <button class="btn btn-ghost btn-full" onclick="closeModal('ov-patient-file')">Kapat</button>`;
   }
   document.getElementById('pfile-footer').innerHTML=footerHtml;
   openModal('ov-patient-file');

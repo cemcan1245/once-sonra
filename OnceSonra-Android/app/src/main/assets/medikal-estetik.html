@@ -119,6 +119,9 @@ textarea.fc{resize:none;min-height:75px}
 .proc-pick-cat .ppc-arrow{transition:transform .2s;flex-shrink:0;color:var(--tl)}
 .proc-pick-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 12px 28px;border-bottom:1px solid var(--b);cursor:pointer;background:#f8fafc;-webkit-user-select:none}
 .proc-pick-item:active{background:var(--pl)}
+.proc-pick-item .pps-arrow{transition:transform .2s;flex-shrink:0;color:var(--tl)}
+.proc-pick-prod{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 10px 44px;border-bottom:1px solid var(--b);cursor:pointer;background:#eef4fb;font-size:14px;color:var(--t);-webkit-user-select:none}
+.proc-pick-prod:active{background:var(--pl)}
 .pr-row{display:flex;align-items:center;gap:8px;padding:10px 15px;border-bottom:1px solid var(--b)}
 .pr-pname{flex:1;font-size:14px}
 .pr-qty{width:65px;padding:6px 8px;border:1.5px solid var(--b);border-radius:7px;font-size:14px;text-align:right;background:#fff;outline:none}
@@ -1595,12 +1598,29 @@ function openProcPicker(target){
       </div>
       <div id="ppc-subs-${i}" style="display:none">`;
       if(hasSubs){
-        cat.subs.forEach(sub=>{
+        cat.subs.forEach((sub,si)=>{
           const enc=encodeURIComponent(sub);
-          html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
-            <span>${sub}</span>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-          </div>`;
+          const subProds=db.products.filter(p=>p.cat===cat.id);
+          const subKey=`${i}-${si}`;
+          if(subProds.length>0){
+            html+=`<div class="proc-pick-item" onclick="togglePickerSub('${subKey}')">
+              <span>${sub}</span>
+              <svg class="pps-arrow" id="pps-arr-${subKey}" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div id="pps-${subKey}" style="display:none">`;
+            subProds.forEach(prod=>{
+              html+=`<div class="proc-pick-prod" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
+                <span>· ${prod.name}</span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>`;
+            });
+            html+='</div>';
+          } else {
+            html+=`<div class="proc-pick-item" onclick="selectProcFromPicker('${cat.id}',decodeURIComponent('${enc}'))">
+              <span>${sub}</span>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8a9ab0" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>`;
+          }
         });
       } else {
         prods.forEach(prod=>{
@@ -1630,6 +1650,15 @@ function togglePickerCat(i){
   const open=subs.style.display==='block';
   subs.style.display=open?'none':'block';
   if(arrow) arrow.style.transform=open?'':'rotate(90deg)';
+}
+
+function togglePickerSub(key){
+  const div=document.getElementById('pps-'+key);
+  const arr=document.getElementById('pps-arr-'+key);
+  if(!div) return;
+  const open=div.style.display==='block';
+  div.style.display=open?'none':'block';
+  if(arr) arr.style.transform=open?'':'rotate(90deg)';
 }
 
 function selectProcFromPicker(catId,name){

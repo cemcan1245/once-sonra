@@ -481,6 +481,23 @@ textarea.fc{resize:none;min-height:75px}
       <div class="fg"><label class="fl">Seans Ücreti (₺)</label><input type="number" class="fc" id="pr-price" placeholder="0"></div>
     </div>
     <div class="fg"><label class="fl">Not</label><textarea class="fc" id="pr-notes" placeholder="İşlem notu..." rows="3"></textarea></div>
+    <div class="fg">
+      <label class="fl">Kontrol Randevusu</label>
+      <div class="tg-grp">
+        <button class="tg-btn no" id="pr-fu-no-btn" onclick="setFollowupEnabled(false)">Hayır</button>
+        <button class="tg-btn" id="pr-fu-yes-btn" onclick="setFollowupEnabled(true)">Ekle</button>
+      </div>
+      <div id="pr-fu-detail" style="display:none">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+          <input type="number" class="fc" id="pr-fu-num" value="2" min="1" max="365" style="flex:0 0 72px;text-align:center">
+          <div class="utg" style="flex:1">
+            <button class="utg-btn" id="pr-fu-gun" onclick="setFollowupUnit('gun')">Gün</button>
+            <button class="utg-btn sel" id="pr-fu-hafta" onclick="setFollowupUnit('hafta')">Hafta</button>
+            <button class="utg-btn" id="pr-fu-ay" onclick="setFollowupUnit('ay')">Ay</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="mfooter">
     <button class="btn btn-err btn-sm" id="pr-del-btn" style="display:none" onclick="deleteProcFromModal()">Sil</button>
@@ -574,7 +591,7 @@ textarea.fc{resize:none;min-height:75px}
 const CATS = [
   {id:'botoks',name:'Botoks',icon:'💉',subs:['3 Bölge','Massater','Terleme','Migren','Nefertiti']},
   {id:'mezoterapi',name:'Mezoterapi',icon:'✨',subs:['Yüz','Saç','Skar']},
-  {id:'dolgu',name:'Dolgu',icon:'💧',subs:[]},
+  {id:'dolgu',name:'Dolgu',icon:'💧',subs:['Dudak','Zigoma','Temporal','Göz Altı','Nazolabial','Çene','Jawline','Burun','Fullface']},
   {id:'sivi-yuz',name:'Sıvı Yüz Germe',icon:'🌊',subs:[]},
   {id:'ip-aski',name:'İp Askı',icon:'🧵',subs:[]},
   {id:'lipoliz',name:'Lipoliz',icon:'🔥',subs:['Gıdı','Göbek','Bacak','Kol','Diğer']},
@@ -602,6 +619,7 @@ const DEFAULT_PRODUCTS = [
   {id:'prf-sac',name:'PRF',cat:'mezoterapi-sac',unit:'adet',price:0},
   {id:'sardenya',name:'Sardenya Deep',cat:'dolgu',unit:'cc',price:0},
   {id:'yvoire',name:'Yvoire Volume',cat:'dolgu',unit:'cc',price:0},
+  {id:'voleria-mid',name:'Voleria Mid',cat:'dolgu',unit:'cc',price:0},
   {id:'caha',name:'Monaco Touch',cat:'sivi-yuz',unit:'cc',price:0},
   {id:'revoderm',name:'Revoderm PLLA',cat:'sivi-yuz',unit:'cc',price:0},
   {id:'gouri',name:'Gouri PCL',cat:'sivi-yuz',unit:'cc',price:0},
@@ -1150,6 +1168,7 @@ function openProcForPatient(pid){
   procProdUnits={};
   const ps=document.getElementById('pr-products-section');
   if(ps) ps.innerHTML='';
+  setFollowupEnabled(false);
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1173,6 +1192,7 @@ function openControlForPatient(pid){
   procProdUnits={};
   updateProcRecordProducts();
   if(lastProc&&lastProc.products) fillProcSavedProducts(lastProc.products);
+  setFollowupEnabled(false);
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1484,6 +1504,7 @@ function openProcRecordModal(typeId,typeName){
   document.getElementById('pr-price').value='';
   document.getElementById('pr-notes').value='';
   procProdUnits={};
+  setFollowupEnabled(false);
   fillProcPatientList();
   updateProcRecordProducts();
   openModal('ov-proc-record');
@@ -1496,6 +1517,21 @@ function fillProcPatientList(){
 // ========== İŞLEM SEÇİCİ ==========
 let procPickerTarget='proc';
 let procProdUnits={};
+let prFollowupUnit='hafta';
+
+function setFollowupEnabled(enabled){
+  document.getElementById('pr-fu-no-btn').className='tg-btn'+(enabled?'':' no');
+  document.getElementById('pr-fu-yes-btn').className='tg-btn'+(enabled?' yes':'');
+  document.getElementById('pr-fu-detail').style.display=enabled?'block':'none';
+}
+
+function setFollowupUnit(unit){
+  prFollowupUnit=unit;
+  ['gun','hafta','ay'].forEach(u=>{
+    const b=document.getElementById('pr-fu-'+u);
+    if(b) b.classList.toggle('sel',u===unit);
+  });
+}
 
 function getProductsForProc(catId,subName){
   let ids;
@@ -1684,6 +1720,7 @@ function editProcFromFile(procId,pid){
   procProdUnits={};
   updateProcRecordProducts();
   if(proc.products) fillProcSavedProducts(proc.products);
+  setFollowupEnabled(false);
   fillProcPatientList();
   openModal('ov-proc-record');
 }
@@ -1753,6 +1790,19 @@ function saveProcRecord(){
     showToast('Kontrol kaydedildi — '+formatDate(dateStr(d))+' tarihine Botoks Kontrol Foto randevusu eklendi ✓');
   } else {
     showToast(kind==='control'?'Kontrol kaydedildi':'İşlem kaydedildi');
+  }
+  // Kontrol randevusu
+  const fuYesBtn=document.getElementById('pr-fu-yes-btn');
+  if(fuYesBtn&&fuYesBtn.classList.contains('yes')){
+    const num=Math.max(1,parseInt(document.getElementById('pr-fu-num').value)||1);
+    const d=new Date(date+'T00:00:00');
+    if(prFollowupUnit==='gun') d.setDate(d.getDate()+num);
+    else if(prFollowupUnit==='hafta') d.setDate(d.getDate()+num*7);
+    else if(prFollowupUnit==='ay') d.setMonth(d.getMonth()+num);
+    const unitLabel=prFollowupUnit==='gun'?'gün':prFollowupUnit==='hafta'?'hafta':'ay';
+    db.appointments.push({id:uid(),patientName,procedure:(typeName||'İşlem')+' Kontrol',date:dateStr(d),time:'10:00',notes:num+' '+unitLabel+' sonra kontrol randevusu (otomatik)'});
+    saveDB('appointments');
+    showToast('✓ '+formatDate(dateStr(d))+' tarihine kontrol randevusu eklendi');
   }
   if(currentEditProcPatientId) renderPatientFile(currentEditProcPatientId,'view');
 }
@@ -2697,8 +2747,16 @@ function migrateDB(){
     {id:'prf-yuz',name:'PRF',cat:'mezoterapi-yuz',unit:'adet',price:0},
     {id:'prp-sac',name:'PRP',cat:'mezoterapi-sac',unit:'adet',price:0},
     {id:'prf-sac',name:'PRF',cat:'mezoterapi-sac',unit:'adet',price:0},
-    {id:'collagen-booster',name:'Collagen Booster',cat:'iv',unit:'adet',price:0}
+    {id:'collagen-booster',name:'Collagen Booster',cat:'iv',unit:'adet',price:0},
+    {id:'voleria-mid',name:'Voleria Mid',cat:'dolgu',unit:'cc',price:0}
   ].forEach(p=>{if(!db.products.find(x=>x.id===p.id)){db.products.push({...p});changed=true;}});
+  // Dolgu subs migration
+  const dolguCat=db.cats.find(c=>c.id==='dolgu');
+  if(dolguCat&&(!dolguCat.subs||dolguCat.subs.length===0)){
+    dolguCat.subs=['Dudak','Zigoma','Temporal','Göz Altı','Nazolabial','Çene','Jawline','Burun','Fullface'];
+    dolguCat.direct=false;
+    saveDB('cats');
+  }
   if(changed) saveDB('products');
 }
 

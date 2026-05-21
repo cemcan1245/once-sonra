@@ -284,6 +284,9 @@ textarea.fc{resize:none;min-height:75px}
 
 </div><!-- /pages -->
 
+<!-- Sync indicator -->
+<div id="sync-dot" title="Senkronize" style="position:fixed;top:10px;right:12px;width:9px;height:9px;border-radius:50%;background:#ccc;z-index:9999;transition:background .4s"></div>
+
 <!-- BOTTOM TABS -->
 <div class="tabs">
   <button class="tab active" onclick="showPage('ajanda',this)">
@@ -566,7 +569,54 @@ textarea.fc{resize:none;min-height:75px}
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+// ==================== SUPABASE ====================
+const SUPABASE_URL='https://wefyszgipfxrhpoldabd.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlZnlzemdpcGZ4cmhwb2xkYWJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODA0NDIsImV4cCI6MjA5NDk1NjQ0Mn0.cRaiekCsyzmZqogYIgWSHJ2asCan9wheHijYTx4vkOI';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SB_KEYS=['patients','appointments','procedures','products','consumables','settings','fiyatTemplates','cats'];
+
+function setSyncStatus(s){
+  const el=document.getElementById('sync-dot');
+  if(!el) return;
+  el.style.background=s==='ok'?'#2ecc71':s==='syncing'?'#f39c12':'#e74c3c';
+  el.title=s==='ok'?'Senkronize':s==='syncing'?'Senkronize ediliyor...':'Bağlantı hatası';
+}
+
+async function syncFromSupabase(){
+  setSyncStatus('syncing');
+  try{
+    const {data,error}=await sb.from('app_data').select('key,value');
+    if(error) throw error;
+    if(!data||!data.length){setSyncStatus('ok');return false;}
+    data.forEach(row=>{
+      if(row.key==='fiyatTemplates') db.fiyatTemplates=row.value||{};
+      else if(row.key in db) db[row.key]=row.value;
+    });
+    SB_KEYS.forEach(k=>{
+      try{localStorage.setItem(k==='fiyatTemplates'?'ek_fiyat':'ek_'+k,JSON.stringify(k==='fiyatTemplates'?db.fiyatTemplates:db[k]));}catch(e){}
+    });
+    db.cats.forEach(c=>{if(c.direct===undefined)c.direct=c.subs.length===0;});
+    setSyncStatus('ok');
+    return true;
+  }catch(e){setSyncStatus('err');return false;}
+}
+
+async function saveToSupabase(keys){
+  setSyncStatus('syncing');
+  try{
+    const rows=(keys&&keys.length?keys:SB_KEYS).map(k=>({
+      key:k,
+      value:k==='fiyatTemplates'?db.fiyatTemplates:db[k],
+      updated_at:new Date().toISOString()
+    }));
+    const {error}=await sb.from('app_data').upsert(rows,{onConflict:'key'});
+    if(error) throw error;
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('err');}
+}
+
 // ==================== CONSTANTS ====================
 const CATS = [
   {id:'botoks',name:'Botoks',icon:'💉',subs:['3 Bölge','Massater','Terleme','Migren','Nefertiti']},
@@ -690,6 +740,7 @@ function saveDB(...keys){
       localStorage.setItem(k==='fiyatTemplates'?'ek_fiyat':'ek_'+k,JSON.stringify(val));
     }catch(e){}
   });
+  saveToSupabase(keys);
 }
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -2736,6 +2787,14 @@ function migrateDB(){
 loadDB();
 migrateDB();
 renderCalendar();
+syncFromSupabase().then(changed=>{
+  if(changed){
+    migrateDB();
+    renderCalendar();
+    if(currentPage==='hastalar') renderPatients();
+    if(currentPage==='islemler') renderIslemler();
+  }
+});
 </script>
 </body>
 </html>

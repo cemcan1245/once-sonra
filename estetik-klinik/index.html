@@ -590,6 +590,7 @@ textarea.fc{resize:none;min-height:75px}
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 // ==================== SUPABASE ====================
 const SUPABASE_URL='https://wefyszgipfxrhpoldabd.supabase.co';
@@ -2625,6 +2626,14 @@ function renderMaliyetYedek(){
         </div>
       </div>
       <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">📋 Excel Dışa Aktarma</div>
+        <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Hasta listesi veya işlemler listesini Excel dosyası olarak indirin.</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-sec btn-full" onclick="exportPatientsExcel()">👥 Hasta Listesini İndir (.xlsx)</button>
+          <button class="btn btn-sec btn-full" onclick="exportProceduresExcel()">💉 İşlemler Listesini İndir (.xlsx)</button>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:16px;border:1px solid var(--b)">
         <div style="font-size:14px;font-weight:700;margin-bottom:6px">👥📅 Hasta & Ajanda Yedeği</div>
         <div style="font-size:13px;color:var(--tl);margin-bottom:12px">Hasta kayıtları, işlem geçmişi ve randevuları birlikte yedekleyin veya geri yükleyin.</div>
         <div style="display:flex;gap:8px">
@@ -2654,6 +2663,72 @@ function fileTimestamp(){
   const h=String(n.getHours()).padStart(2,'0');
   const m=String(n.getMinutes()).padStart(2,'0');
   return d+'_'+h+'-'+m;
+}
+
+function exportPatientsExcel(){
+  if(!db.patients.length){showToast('Kayıtlı hasta yok');return;}
+  const rows=db.patients.map(p=>{
+    const procs=db.procedures.filter(x=>x.patientId===p.id||(x.patientName&&x.patientName.toLowerCase()===p.name.toLowerCase()));
+    const lastProc=procs.length?procs.map(x=>x.date).sort().pop():'';
+    return {
+      'Ad Soyad':p.name||'',
+      'Cinsiyet':p.gender==='K'?'Kadın':p.gender==='E'?'Erkek':'',
+      'TC No':p.tc||'',
+      'Yaş':p.age||'',
+      'Telefon':p.phone||'',
+      'Kayıt Tarihi':p.createdAt?formatDate(p.createdAt):'',
+      'Şikayet':p.complaint||'',
+      'Kronik Hastalık':p.chronic?((p.chronic.has==='Var'?'Var: '+p.chronic.detail:'Yok')):'',
+      'Bağışıklık Sorunu':p.immune?((p.immune.has==='Var'?'Var: '+p.immune.detail:'Yok')):'',
+      'İlaç Kullanımı':p.meds?((p.meds.has==='Var'?'Var: '+p.meds.detail:'Yok')):'',
+      'Alerji':p.allergy?((p.allergy.has==='Var'?'Var: '+p.allergy.detail:'Yok')):'',
+      'Kan Değerleri':p.blood?((p.blood.has==='Var'?'Var: '+p.blood.detail:'Yok')):'',
+      'Enfeksiyon':p.infect?((p.infect.has==='Var'?'Var: '+p.infect.detail:'Yok')):'',
+      'Ameliyat Geçmişi':p.surgery?((p.surgery.has==='Var'?'Var: '+p.surgery.detail:'Yok')):'',
+      'Estetik Geçmişi':p.aesthetic?((p.aesthetic.has==='Var'?'Var: '+p.aesthetic.detail:'Yok')):'',
+      'Gebelik':p.pregnancy||'',
+      'Emzirme':p.breastfeed||'',
+      'Toplam İşlem':procs.length,
+      'Son İşlem':lastProc?formatDate(lastProc):''
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);
+  // Sütun genişlikleri
+  ws['!cols']=[{wch:22},{wch:8},{wch:14},{wch:5},{wch:14},{wch:12},{wch:20},
+    {wch:22},{wch:22},{wch:22},{wch:22},{wch:22},{wch:22},{wch:22},{wch:22},
+    {wch:10},{wch:10},{wch:12},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Hasta Listesi');
+  XLSX.writeFile(wb,'hasta-listesi-'+fileTimestamp()+'.xlsx');
+  showToast('✓ Hasta listesi indirildi');
+}
+
+function exportProceduresExcel(){
+  if(!db.procedures.length){showToast('Kayıtlı işlem yok');return;}
+  const sorted=[...db.procedures].sort((a,b)=>b.date.localeCompare(a.date));
+  const rows=sorted.map(proc=>{
+    const cat=db.cats.find(c=>c.id===proc.typeId);
+    const catName=cat?cat.name:(proc.typeId||'');
+    const subName=(proc.typeName&&proc.typeName!==catName)?proc.typeName:'';
+    const prodsStr=(proc.products||[]).map(p=>p.name+(p.qty&&p.qty!==1?' ×'+p.qty:'')).join(', ');
+    const kindLabel=proc.kind==='control'?'Kontrol':proc.kind==='combo'?'Kombo':'Yeni';
+    return {
+      'Tarih':proc.date?formatDate(proc.date):'',
+      'Hasta Adı':proc.patientName||'',
+      'İşlem Kategorisi':catName,
+      'Alt Başlık / İşlem':subName,
+      'Tür':kindLabel,
+      'Kullanılan Ürünler':prodsStr,
+      'Seans Ücreti (₺)':proc.price||0,
+      'Not':proc.notes||''
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:22},{wch:18},{wch:18},{wch:8},{wch:35},{wch:16},{wch:25}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'İşlemler');
+  XLSX.writeFile(wb,'islemler-listesi-'+fileTimestamp()+'.xlsx');
+  showToast('✓ İşlemler listesi indirildi');
 }
 
 function exportData(){

@@ -1,4 +1,4 @@
-const CACHE = 'estetik-klinik-v24';
+const CACHE = 'estetik-klinik-v25';
 const ASSETS = [
   './', './index.html', './manifest.json', './icon.svg',
   './icon192.png', './icon512.png',

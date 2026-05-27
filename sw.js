@@ -1,8 +1,8 @@
-const CACHE = 'once-sonra-v1';
+const CACHE = 'once-sonra-v2';
 const ASSETS = [
-  '/before-after.html',
-  '/manifest.json',
-  '/icon.svg',
+  '/once-sonra/before-after.html',
+  '/once-sonra/manifest.json',
+  '/once-sonra/icon.svg',
   'https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js'
 ];
 
